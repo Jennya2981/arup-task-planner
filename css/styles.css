@@ -168,6 +168,36 @@ body:not(.is-viewer) .user-only { display: none !important; }
   white-space: nowrap;
 }
 
+/* Индикатор связи с общим календарём */
+.sync {
+  font-size: 11px; font-weight: 600;
+  padding: 5px 10px; border-radius: 20px;
+  color: var(--muted-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.sync--ok {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 38%, var(--border));
+}
+
+.sync--warn {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 38%, var(--border));
+}
+
+.modal__text {
+  margin: 0 0 14px;
+  font-size: 13px; line-height: 1.5; color: var(--muted);
+}
+
+.modal__error {
+  margin: 10px 0 0;
+  font-size: 12.5px; color: var(--danger);
+}
+
 .nav { display: flex; flex-direction: column; gap: 2px; }
 
 .nav__item {

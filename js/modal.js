@@ -34,6 +34,10 @@
     dom.confirmText = document.getElementById('confirmText');
     dom.confirmTitle = document.getElementById('confirmTitle');
     dom.confirmOk = document.getElementById('confirmOk');
+    dom.tokenModal = document.getElementById('tokenModal');
+    dom.tokenForm = document.getElementById('tokenForm');
+    dom.tokenError = document.getElementById('tokenError');
+    dom.tokenSubmit = document.getElementById('tokenSubmit');
     dom.toasts = document.getElementById('toasts');
   }
 
@@ -452,7 +456,41 @@
     }, opts.duration || (opts.actionLabel ? 6000 : 2600));
   }
 
-  /* -------------------------------- Export ------------------------------- */
+  /* ------------------------------ Export ------------------------------- */
+
+  /* --------------------------- Вход владельца --------------------------- */
+
+  /** Модалка входа владельца: ключ доступа к общему календарю. */
+  function openTokenModal() {
+    dom.tokenForm.reset();
+    dom.tokenError.hidden = true;
+    openModal(dom.tokenModal);
+    setTimeout(() => dom.tokenForm.elements.token.focus(), 30);
+  }
+
+  function submitToken(event) {
+    event.preventDefault();
+    const value = dom.tokenForm.elements.token.value.trim();
+    if (!value) return;
+
+    dom.tokenError.hidden = true;
+    dom.tokenSubmit.disabled = true;
+    dom.tokenSubmit.textContent = 'Проверяю…';
+
+    store.unlockAdmin(value).then((granted) => {
+      dom.tokenSubmit.disabled = false;
+      dom.tokenSubmit.textContent = 'Войти';
+      if (granted) {
+        closeModal(dom.tokenModal);
+        showToast('Режим администратора включён');
+        if (CAL.app && CAL.app.startSync) CAL.app.startSync();
+      } else {
+        const reason = (CAL.db && CAL.db.getStatus && CAL.db.getStatus().message) || 'Ключ не подошёл или нет доступа к хранилищу';
+        dom.tokenError.textContent = reason;
+        dom.tokenError.hidden = false;
+      }
+    });
+  }
 
   CAL.modal = {
     cacheElements,
@@ -478,6 +516,8 @@
     confirmDialog,
     acceptConfirm,
     showToast,
+    openTokenModal,
+    submitToken,
     openModal,
     closeModal,
     isOpen,

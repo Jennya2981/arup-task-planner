@@ -15,15 +15,14 @@
       'viewNav', 'prevBtn', 'nextBtn', 'todayBtn', 'newTaskBtn', 'menuBtn',
       'searchInput', 'searchClear', 'managePeopleBtn', 'exportBtn', 'importBtn',
       'importFile', 'resetBtn', 'app', 'roleSelect', 'managePriorityBtn',
-      'manageStatusBtn', 'dictFormPriority', 'dictFormStatus', 'adminLoginBtn'
+      'manageStatusBtn', 'dictFormPriority', 'dictFormStatus', 'adminLoginBtn',
+      'syncStatus'
     ].forEach((id) => { dom[id] = document.getElementById(id); });
   }
 
   /* -------------------------------- Старт -------------------------------- */
 
-  function init() {
-    store.load();
-
+  async function init() {
     CAL.ui.cacheElements();
     CAL.modal.cacheElements();
     cacheElements();
@@ -33,7 +32,55 @@
     bindKeyboard();
 
     store.subscribe(() => CAL.ui.render());
+
+    await store.load();
     CAL.ui.render();
+
+    if (store.isShared()) {
+      CAL.db.onStatus(renderSync);
+      startSync();
+      renderSync(CAL.db.getStatus());
+    }
+  }
+
+  /** Период опроса: у владельца чаще, у посетителей — реже (лимит запросов). */
+  function syncInterval() {
+    return store.isAdmin() ? 20000 : 90000;
+  }
+
+  function startSync() {
+    if (!store.isShared() || !CAL.db) return;
+    CAL.db.stopPolling();
+    CAL.db.startPolling(() => {
+      if (document.visibilityState === 'hidden') return;
+      store.refresh();
+    }, syncInterval());
+  }
+
+  /** Индикатор связи с общим календарём. */
+  function renderSync(status) {
+    if (!dom.syncStatus) return;
+    const s = status || {};
+    const time = new Date(s.at || Date.now()).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    dom.syncStatus.hidden = false;
+
+    if (s.state === 'error') {
+      dom.syncStatus.textContent = 'Нет связи';
+      dom.syncStatus.className = 'sync sync--warn';
+      dom.syncStatus.title = s.message || 'Не удалось связаться с общим календарём';
+    } else if (s.state === 'warn') {
+      dom.syncStatus.textContent = 'Обновление с задержкой';
+      dom.syncStatus.className = 'sync sync--warn';
+      dom.syncStatus.title = s.message || 'Показан кэш GitHub, данные могут отставать';
+    } else if (s.state === 'saved') {
+      dom.syncStatus.textContent = 'Сохранено в общий календарь';
+      dom.syncStatus.className = 'sync sync--ok';
+      dom.syncStatus.title = 'Изменения записаны в общее хранилище';
+    } else {
+      dom.syncStatus.textContent = 'Общий календарь · ' + time;
+      dom.syncStatus.className = 'sync';
+      dom.syncStatus.title = 'Данные общие для всех, кто открыл ссылку';
+    }
   }
 
   /* ------------------------------ События -------------------------------- */
@@ -59,6 +106,7 @@
       if (dom.roleSelect.value === 'user') {
         store.lockAdmin();
         CAL.modal.showToast('Режим администратора выключен — только просмотр');
+        startSync();
         return;
       }
       if (!store.hasAdminGrant()) {
@@ -67,9 +115,14 @@
       }
       store.setRole('admin');
       CAL.modal.showToast('Роль: Администратор — редактирование доступно');
+      startSync();
     });
 
     dom.adminLoginBtn.addEventListener('click', () => {
+      if (store.isShared()) {
+        CAL.modal.openTokenModal();
+        return;
+      }
       const pwd = window.prompt('Пароль администратора');
       if (pwd === null) return;
       store.unlockAdmin(pwd).then((granted) => {
@@ -150,6 +203,7 @@
 
     document.getElementById('personForm').addEventListener('submit', CAL.modal.addPerson);
     document.getElementById('confirmOk').addEventListener('click', CAL.modal.acceptConfirm);
+    document.getElementById('tokenForm').addEventListener('submit', CAL.modal.submitToken);
   }
 
   function bindDelegatedEvents() {
@@ -372,6 +426,8 @@
       }
     });
   }
+
+  CAL.app = { startSync, syncInterval };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

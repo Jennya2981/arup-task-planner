@@ -176,11 +176,26 @@ window.CAL = window.CAL || {};
 
   const listeners = [];
 
+  /* --------------------------- Общий календарь -------------------------- */
+
+  let shared = false;      // данные лежат в общем хранилище, а не только в браузере
+  let saveTimer = null;    // отложенная запись в общее хранилище
+  let dirty = false;       // есть несохранённые правки — их нельзя затирать опросом
+  let appliedAt = 0;       // метка времени последних принятых данных (из exportedAt)
+
   function subscribe(fn) { listeners.push(fn); }
 
-  function emit() {
-    save();
+  function emit(persist) {
+    if (persist !== false) save();
     listeners.forEach((fn) => fn());
+  }
+
+  function isShared() {
+    return shared;
+  }
+
+  function sharedEnabled() {
+    return !!(CAL.db && CAL.db.enabled());
   }
 
   /* ----------------------------- Справочники --------------------------- */
@@ -319,6 +334,7 @@ window.CAL = window.CAL || {};
 
   /** Выдан ли этому браузеру ключ администратора. */
   function hasAdminGrant() {
+    if (sharedEnabled() && CAL.db) return CAL.db.hasToken();
     try {
       return localStorage.getItem(ADMIN_KEY) === '1';
     } catch (err) {
@@ -332,25 +348,38 @@ window.CAL = window.CAL || {};
       .then((buf) => Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join(''));
   }
 
-  /** Проверка пароля владельца. При успехе выдаёт права администратора этому браузеру. */
-  function unlockAdmin(password) {
-    if (!password) return Promise.resolve(false);
-    return sha256(String(password)).then((hash) => {
+  /** Вход владельца. В общем режиме — по ключу доступа, локально — по паролю. */
+  function unlockAdmin(secret) {
+    if (!secret) return Promise.resolve(false);
+
+    if (sharedEnabled() && CAL.db) {
+      return CAL.db.verify(String(secret).trim()).then((valid) => {
+        if (!valid) return false;
+        CAL.db.setToken(String(secret).trim());
+        state.user.role = 'admin';
+        saveLocal();
+        emit(false);
+        return true;
+      });
+    }
+
+    return sha256(String(secret)).then((hash) => {
       if (hash !== ADMIN_PWD_HASH) return false;
       try { localStorage.setItem(ADMIN_KEY, '1'); } catch (err) { /* приватный режим */ }
       state.user.role = 'admin';
-      save();
-      emit();
+      saveLocal();
+      emit(false);
       return true;
     });
   }
 
   /** Снятие прав администратора в этом браузере (возврат к режиму просмотра). */
   function lockAdmin() {
-    try { localStorage.removeItem(ADMIN_KEY); } catch (err) { /* пусто */ }
+    if (sharedEnabled() && CAL.db) CAL.db.clearToken();
+    else { try { localStorage.removeItem(ADMIN_KEY); } catch (err) { /* пусто */ } }
     state.user.role = 'user';
-    save();
-    emit();
+    saveLocal();
+    emit(false);
   }
 
   function setRole(role) {
@@ -358,13 +387,13 @@ window.CAL = window.CAL || {};
     if (role === 'admin') {
       if (!hasAdminGrant()) return;
       state.user.role = 'admin';
-      save();
-      emit();
+      saveLocal();
+      emit(false);
       return;
     }
     if (!ROLES[role]) return;
     state.user.role = role;
-    emit();
+    emit(false);
   }
 
   function normalizeUser(raw) {
@@ -374,7 +403,27 @@ window.CAL = window.CAL || {};
 
   /* --------------------------- Хранилище ------------------------------- */
 
+  /** Текущее состояние в формате общего файла. */
+  function snapshot() {
+    return {
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      people: state.people,
+      tasks: state.tasks,
+      priorities: state.priorities,
+      statuses: state.statuses
+    };
+  }
+
   function save() {
+    if (shared) {
+      schedulePush();
+      return;
+    }
+    saveLocal();
+  }
+
+  function saveLocal() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         version: 2,
@@ -389,7 +438,86 @@ window.CAL = window.CAL || {};
     }
   }
 
-  function load() {
+  /** Отложенная запись в общее хранилище — чтобы не слать запрос на каждое движение мыши. */
+  function schedulePush() {
+    dirty = true;
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(push, 600);
+  }
+
+  async function push() {
+    saveTimer = null;
+    if (!shared || !CAL.db) return;
+    try {
+      const snap = snapshot();
+      await CAL.db.save(snap);
+      dirty = false;
+      appliedAt = Date.parse(snap.exportedAt || '') || appliedAt;
+    } catch (err) {
+      CAL.db.setStatus('error', err.message);
+    }
+  }
+
+  /** Отпечаток данных — чтобы понять, изменилось ли что-то в общем хранилище. */
+  function fingerprint(data) {
+    const people = Array.isArray(data.people) ? data.people.map(normalizePerson) : [];
+    const tasks = Array.isArray(data.tasks) ? data.tasks.map(normalizeTask) : [];
+    return JSON.stringify({
+      people,
+      tasks,
+      priorities: normalizeDict(data.priorities, DEFAULT_PRIORITIES),
+      statuses: normalizeDict(data.statuses, DEFAULT_STATUSES)
+    });
+  }
+
+  function applyData(data) {
+    state.people = Array.isArray(data.people) ? data.people.map(normalizePerson) : [];
+    state.priorities = normalizeDict(data.priorities, DEFAULT_PRIORITIES);
+    state.statuses = normalizeDict(data.statuses, DEFAULT_STATUSES);
+    state.tasks = Array.isArray(data.tasks) ? data.tasks.map(normalizeTask) : [];
+    sanitizeTasks();
+    appliedAt = Date.parse(data.exportedAt || '') || appliedAt;
+  }
+
+  /** Проверка обновлений в общем хранилище. */
+  async function refresh() {
+    if (!shared || !CAL.db || dirty) return false;
+    try {
+      const data = await CAL.db.load();
+      const stamp = Date.parse(data.exportedAt || '') || 0;
+
+      // GitHub отдаёт открытую ссылку с задержкой — такие данные не должны
+      // откатывать более свежее состояние.
+      if (stamp && appliedAt && stamp < appliedAt) return false;
+      if (fingerprint(data) === fingerprint(snapshot())) return false;
+
+      applyData(data);
+      saveLocal();
+      emit(false);
+      return true;
+    } catch (err) {
+      CAL.db.setStatus('error', err.message);
+      return false;
+    }
+  }
+
+  async function load() {
+    if (sharedEnabled()) {
+      shared = true;
+      try {
+        const data = await CAL.db.load();
+        applyData(data);
+      } catch (err) {
+        const cached = CAL.db.readCache();
+        if (cached) applyData(cached);
+        else { state.people = []; state.tasks = []; seed(); }
+        CAL.db.setStatus('error', err.message);
+      }
+      state.user.role = CAL.db.hasToken() ? 'admin' : 'user';
+      saveLocal();
+      return;
+    }
+
     let raw = null;
     try {
       raw = localStorage.getItem(STORAGE_KEY);
@@ -399,25 +527,21 @@ window.CAL = window.CAL || {};
 
     if (!raw) {
       seed();
-      save();
+      saveLocal();
       return;
     }
 
     try {
       const parsed = JSON.parse(raw);
-      state.people = Array.isArray(parsed.people) ? parsed.people.map(normalizePerson) : [];
-      state.priorities = normalizeDict(parsed.priorities, DEFAULT_PRIORITIES);
-      state.statuses = normalizeDict(parsed.statuses, DEFAULT_STATUSES);
+      applyData(parsed);
       state.user = normalizeUser(parsed.user);
       if (!hasAdminGrant()) state.user.role = 'user';
-      state.tasks = Array.isArray(parsed.tasks) ? parsed.tasks.map(normalizeTask) : [];
-      sanitizeTasks();
     } catch (err) {
       console.warn('Повреждённые данные, создаю демо-набор:', err);
       state.people = [];
       state.tasks = [];
       seed();
-      save();
+      saveLocal();
     }
   }
 
@@ -645,14 +769,7 @@ window.CAL = window.CAL || {};
   /* ------------------------------- Экспорт ----------------------------- */
 
   function exportData() {
-    return JSON.stringify({
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      people: state.people,
-      tasks: state.tasks,
-      priorities: state.priorities,
-      statuses: state.statuses
-    }, null, 2);
+    return JSON.stringify(snapshot(), null, 2);
   }
 
   function importData(json, merge) {
@@ -726,7 +843,7 @@ window.CAL = window.CAL || {};
   };
 
   CAL.store = {
-    load, save, subscribe, emit,
+    load, save, subscribe, emit, refresh, isShared, snapshot,
     getPerson, personName, personColor, taskCountForPerson,
     addTask, updateTask, removeTask, restoreTask,
     addPerson, updatePerson, removePerson, nextPersonColor,

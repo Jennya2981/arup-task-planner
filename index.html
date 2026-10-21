@@ -27,7 +27,7 @@
           <option value="user">Пользователь</option>
         </select>
         <span class="user-card__hint" id="roleHint">Может редактировать задачи и справочники</span>
-        <button type="button" class="link-btn user-only" id="adminLoginBtn" title="Войти с паролем владельца">Войти как администратор</button>
+        <button type="button" class="link-btn user-only" id="adminLoginBtn" title="Войти владельцем общего календаря">Войти как администратор</button>
       </div>
     </div>
 
@@ -90,6 +90,7 @@
         </div>
         <button class="btn" id="todayBtn">Сегодня</button>
         <span class="role-badge" id="roleBadge" hidden>Только просмотр</span>
+        <span class="sync" id="syncStatus" hidden></span>
       </div>
       <div class="topbar__right">
         <div class="search">
@@ -246,8 +247,39 @@
   </div>
 </div>
 
+<!-- ================= Вход владельца ================= -->
+<div class="modal" id="tokenModal" hidden>
+  <div class="modal__backdrop" data-close></div>
+  <form class="modal__card modal__card--narrow" id="tokenForm" autocomplete="off">
+    <header class="modal__head">
+      <h2>Вход владельца</h2>
+      <button type="button" class="icon-btn" data-close title="Закрыть (Esc)">✕</button>
+    </header>
+
+    <div class="modal__body">
+      <p class="modal__text">
+        Введите ключ доступа к общему календарю. Он хранится только в этом браузере
+        и нигде не публикуется — без него календарь доступен только для просмотра.
+      </p>
+      <label class="field">
+        <span class="field__label">Ключ доступа</span>
+        <textarea name="token" rows="3" placeholder="github_pat_…" spellcheck="false"></textarea>
+      </label>
+      <p class="modal__error" id="tokenError" hidden></p>
+    </div>
+
+    <footer class="modal__foot">
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>Отмена</button>
+      <button type="submit" class="btn btn--primary" id="tokenSubmit">Войти</button>
+    </footer>
+  </form>
+</div>
+
 <div class="toasts" id="toasts"></div>
 
+<script src="js/config.js"></script>
+<script src="js/db.js"></script>
 <script src="js/store.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/modal.js"></script>
