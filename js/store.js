@@ -678,7 +678,7 @@ window.CAL = window.CAL || {};
     load, save, subscribe, emit,
     getPerson, personName, personColor, taskCountForPerson,
     addTask, updateTask, removeTask, restoreTask,
-    addPerson, updatePerson, removePerson,
+    addPerson, updatePerson, removePerson, nextPersonColor,
     dictList, dictEntry, dictLabel, dictColor, dictUsage, nextDictColor,
     dictAdd, dictUpdate, dictRemove,
     isAdmin, setRole,
