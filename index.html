@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Календарь задач</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234f46e5'/%3E%3Crect x='7' y='9' width='18' height='16' rx='3' fill='%23fff'/%3E%3Crect x='7' y='9' width='18' height='5' rx='3' fill='%23c7d2fe'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app" id="app">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar__brand">
+      <div class="brand__logo">К</div>
+      <div>
+        <div class="brand__title">Календарь задач</div>
+        <div class="brand__sub" id="brandSub">Локальное хранилище</div>
+      </div>
+    </div>
+
+    <div class="user-card">
+      <span class="user-card__avatar" id="userAvatar">А</span>
+      <div class="user-card__info">
+        <select id="roleSelect" class="user-card__select" title="Текущий пользователь">
+          <option value="admin">Администратор</option>
+          <option value="user">Пользователь</option>
+        </select>
+        <span class="user-card__hint" id="roleHint">Может редактировать задачи и справочники</span>
+      </div>
+    </div>
+
+    <div class="sidebar__scroll">
+      <nav class="nav" id="viewNav">
+        <button class="nav__item is-active" data-view="day"><span class="nav__icon">☀</span>День</button>
+        <button class="nav__item" data-view="week"><span class="nav__icon">▤</span>Неделя</button>
+        <button class="nav__item" data-view="month"><span class="nav__icon">▦</span>Месяц</button>
+        <button class="nav__item" data-view="list"><span class="nav__icon">☰</span>Список</button>
+      </nav>
+
+      <section class="sidebar__section">
+        <div class="section__head">
+          <span>Ответственные</span>
+          <button class="link-btn admin-only" id="managePeopleBtn" title="Добавить или изменить ответственных">Управлять</button>
+        </div>
+        <div class="filter-list" id="assigneeFilters"></div>
+      </section>
+
+      <section class="sidebar__section">
+        <div class="section__head">
+          <span>Приоритет</span>
+          <button class="link-btn admin-only" id="managePriorityBtn" title="Редактировать приоритеты">Управлять</button>
+        </div>
+        <div class="filter-list" id="priorityFilters"></div>
+      </section>
+
+      <section class="sidebar__section">
+        <div class="section__head">
+          <span>Статус</span>
+          <button class="link-btn admin-only" id="manageStatusBtn" title="Редактировать статусы">Управлять</button>
+        </div>
+        <div class="filter-list" id="statusFilters"></div>
+      </section>
+
+      <section class="sidebar__section sidebar__stats">
+        <div class="stat"><span class="stat__value" id="statTotal">0</span><span class="stat__label">всего задач</span></div>
+        <div class="stat"><span class="stat__value" id="statToday">0</span><span class="stat__label">на сегодня</span></div>
+        <div class="stat stat--warn"><span class="stat__value" id="statOverdue">0</span><span class="stat__label">просрочено</span></div>
+        <div class="stat stat--ok"><span class="stat__value" id="statDone">0</span><span class="stat__label">выполнено</span></div>
+      </section>
+    </div>
+
+    <section class="sidebar__footer">
+      <button class="ghost-btn" id="exportBtn">Экспорт JSON</button>
+      <button class="ghost-btn admin-only" id="importBtn">Импорт JSON</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+      <button class="ghost-btn ghost-btn--danger admin-only" id="resetBtn">Очистить всё</button>
+    </section>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar__left">
+        <button class="icon-btn" id="menuBtn" title="Скрыть панель">☰</button>
+        <div class="period">
+          <button class="icon-btn" id="prevBtn" title="Назад (←)">‹</button>
+          <button class="icon-btn" id="nextBtn" title="Вперёд (→)">›</button>
+          <h1 class="period__title" id="periodTitle">—</h1>
+        </div>
+        <button class="btn" id="todayBtn">Сегодня</button>
+        <span class="role-badge" id="roleBadge" hidden>Только просмотр</span>
+      </div>
+      <div class="topbar__right">
+        <div class="search">
+          <span class="search__icon">⌕</span>
+          <input type="search" id="searchInput" placeholder="Поиск задач…  (/)" autocomplete="off">
+          <button class="search__clear" id="searchClear" title="Очистить" hidden>✕</button>
+        </div>
+        <button class="btn btn--primary admin-only" id="newTaskBtn">+ Задача <kbd>N</kbd></button>
+      </div>
+    </header>
+
+    <div class="view" id="view"></div>
+  </main>
+</div>
+
+<!-- ================= Модалка задачи ================= -->
+<div class="modal" id="taskModal" hidden>
+  <div class="modal__backdrop" data-close></div>
+  <form class="modal__card" id="taskForm" autocomplete="off">
+    <header class="modal__head">
+      <h2 id="taskModalTitle">Новая задача</h2>
+      <button type="button" class="icon-btn" data-close title="Закрыть (Esc)">✕</button>
+    </header>
+
+    <div class="modal__body">
+      <p class="readonly-hint" id="taskReadonlyHint" hidden>Режим просмотра: редактировать задачи может только администратор.</p>
+
+      <label class="field">
+        <span class="field__label">Название</span>
+        <input type="text" name="title" required maxlength="120" placeholder="Что нужно сделать?">
+      </label>
+
+      <div class="field-row">
+        <label class="field">
+          <span class="field__label">Дата</span>
+          <input type="date" name="date" required>
+        </label>
+        <label class="field">
+          <span class="field__label">Начало</span>
+          <input type="time" name="startTime">
+        </label>
+        <label class="field">
+          <span class="field__label">Окончание</span>
+          <input type="time" name="endTime">
+        </label>
+      </div>
+
+      <div class="field-row">
+        <label class="field">
+          <span class="field__label">Ответственный</span>
+          <select name="assigneeId"></select>
+        </label>
+        <label class="field">
+          <span class="field__label">Приоритет</span>
+          <select name="priority"></select>
+        </label>
+        <label class="field">
+          <span class="field__label">Статус</span>
+          <select name="status"></select>
+        </label>
+      </div>
+
+      <label class="field">
+        <span class="field__label">Описание</span>
+        <textarea name="notes" rows="4" maxlength="2000" placeholder="Детали, ссылки, критерии готовности…"></textarea>
+      </label>
+    </div>
+
+    <footer class="modal__foot">
+      <button type="button" class="btn btn--danger" id="deleteTaskBtn">Удалить</button>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="cancelTaskBtn" data-close>Отмена</button>
+      <button type="submit" class="btn btn--primary" id="saveTaskBtn">Сохранить</button>
+    </footer>
+  </form>
+</div>
+
+<!-- ================= Модалка ответственных ================= -->
+<div class="modal" id="peopleModal" hidden>
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__card modal__card--narrow">
+    <header class="modal__head">
+      <h2>Ответственные</h2>
+      <button type="button" class="icon-btn" data-close title="Закрыть (Esc)">✕</button>
+    </header>
+
+    <div class="modal__body">
+      <form class="person-form" id="personForm" autocomplete="off">
+        <input type="text" name="name" required maxlength="40" placeholder="Имя нового ответственного">
+        <div class="swatches" id="personSwatches"></div>
+        <button type="submit" class="btn btn--primary">Добавить</button>
+      </form>
+      <ul class="people-list" id="peopleList"></ul>
+    </div>
+
+    <footer class="modal__foot">
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>Закрыть</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= Модалка справочников ================= -->
+<div class="modal" id="dictModal" hidden>
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__card modal__card--narrow">
+    <header class="modal__head">
+      <h2>Приоритеты и статусы</h2>
+      <button type="button" class="icon-btn" data-close title="Закрыть (Esc)">✕</button>
+    </header>
+
+    <div class="modal__body">
+      <section class="dict-section">
+        <h3 class="dict__title">Приоритеты</h3>
+        <form class="person-form" id="dictFormPriority" data-dict-form="priority" autocomplete="off">
+          <input type="text" name="label" required maxlength="40" placeholder="Новый приоритет">
+          <div class="swatches" id="dictSwatchesPriority"></div>
+          <button type="submit" class="btn btn--primary">Добавить</button>
+        </form>
+        <ul class="people-list" id="dictListPriority"></ul>
+      </section>
+
+      <hr class="dict__sep">
+
+      <section class="dict-section">
+        <h3 class="dict__title">Статусы</h3>
+        <form class="person-form" id="dictFormStatus" data-dict-form="status" autocomplete="off">
+          <input type="text" name="label" required maxlength="40" placeholder="Новый статус">
+          <div class="swatches" id="dictSwatchesStatus"></div>
+          <button type="submit" class="btn btn--primary">Добавить</button>
+        </form>
+        <ul class="people-list" id="dictListStatus"></ul>
+      </section>
+    </div>
+
+    <footer class="modal__foot">
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>Закрыть</button>
+    </footer>
+  </div>
+</div>
+
+<!-- ================= Подтверждение ================= -->
+<div class="modal" id="confirmModal" hidden>
+  <div class="modal__backdrop" data-close></div>
+  <div class="modal__card modal__card--narrow">
+    <header class="modal__head"><h2 id="confirmTitle">Подтвердите действие</h2></header>
+    <div class="modal__body"><p class="confirm__text" id="confirmText"></p></div>
+    <footer class="modal__foot">
+      <span class="spacer"></span>
+      <button type="button" class="btn" data-close>Отмена</button>
+      <button type="button" class="btn btn--danger" id="confirmOk">Удалить</button>
+    </footer>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script src="js/store.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/dnd.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
