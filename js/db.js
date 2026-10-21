@@ -180,7 +180,11 @@ window.CAL = window.CAL || {};
         return false;
       }
       const repo = await res.json();
-      if (!repo || !repo.permissions || repo.permissions.push === false) {
+      if (!repo || !repo.permissions) {
+        setStatus('error', 'не удалось проверить права ключа');
+        return false;
+      }
+      if (repo.permissions.push === false && !(await canWrite(token))) {
         setStatus('error', 'у ключа нет права записи в хранилище');
         return false;
       }
@@ -191,9 +195,9 @@ window.CAL = window.CAL || {};
     }
   }
 
-  async function put(snapshot, sha) {
-    const token = getToken();
-    if (!token) throw new Error('нет ключа доступа');
+  async function put(snapshot, sha, token) {
+    const key = token || getToken();
+    if (!key) throw new Error('нет ключа доступа');
 
     const body = {
       message: 'Календарь: обновление ' + new Date().toISOString(),
@@ -204,7 +208,7 @@ window.CAL = window.CAL || {};
 
     const res = await fetch(API + contentsPath(), {
       method: 'PUT',
-      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders(token)),
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders(key)),
       body: JSON.stringify(body)
     });
 
@@ -215,6 +219,22 @@ window.CAL = window.CAL || {};
       throw e;
     }
     return res.json();
+  }
+
+  /** Пробная запись: переписываем файл тем же содержимым, чтобы убедиться, что ключ пишет. */
+  async function canWrite(token) {
+    try {
+      const res = await fetch(API + contentsPath(), { headers: authHeaders(token), cache: 'no-store' });
+      if (!res.ok) return false;
+      const wrapper = await res.json();
+      const data = decodeContent(wrapper);
+      if (!data || !Array.isArray(data.tasks)) return false;
+      const saved = await put(data, wrapper.sha, token);
+      if (saved && saved.content && saved.content.sha) lastSha = saved.content.sha;
+      return true;
+    } catch (err) {
+      return false;
+    }
   }
 
   /** Сохранить состояние календаря в общий файл. */
