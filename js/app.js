@@ -15,7 +15,7 @@
       'viewNav', 'prevBtn', 'nextBtn', 'todayBtn', 'newTaskBtn', 'menuBtn',
       'searchInput', 'searchClear', 'managePeopleBtn', 'exportBtn', 'importBtn',
       'importFile', 'resetBtn', 'app', 'roleSelect', 'managePriorityBtn',
-      'manageStatusBtn', 'dictFormPriority', 'dictFormStatus'
+      'manageStatusBtn', 'dictFormPriority', 'dictFormStatus', 'adminLoginBtn'
     ].forEach((id) => { dom[id] = document.getElementById(id); });
   }
 
@@ -56,10 +56,27 @@
     });
 
     dom.roleSelect.addEventListener('change', () => {
-      store.setRole(dom.roleSelect.value);
-      CAL.modal.showToast(store.isAdmin()
-        ? 'Роль: Администратор — редактирование доступно'
-        : 'Роль: Пользователь — только просмотр');
+      if (dom.roleSelect.value === 'user') {
+        store.lockAdmin();
+        CAL.modal.showToast('Режим администратора выключен — только просмотр');
+        return;
+      }
+      if (!store.hasAdminGrant()) {
+        dom.roleSelect.value = state.user.role;
+        return;
+      }
+      store.setRole('admin');
+      CAL.modal.showToast('Роль: Администратор — редактирование доступно');
+    });
+
+    dom.adminLoginBtn.addEventListener('click', () => {
+      const pwd = window.prompt('Пароль администратора');
+      if (pwd === null) return;
+      store.unlockAdmin(pwd).then((granted) => {
+        CAL.modal.showToast(granted
+          ? 'Режим администратора включён'
+          : 'Неверный пароль — остаётся режим просмотра');
+      });
     });
 
     dom.menuBtn.addEventListener('click', () => {

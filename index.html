@@ -22,11 +22,12 @@
     <div class="user-card">
       <span class="user-card__avatar" id="userAvatar">А</span>
       <div class="user-card__info">
-        <select id="roleSelect" class="user-card__select" title="Текущий пользователь">
+        <select id="roleSelect" class="user-card__select admin-only" title="Текущий пользователь">
           <option value="admin">Администратор</option>
           <option value="user">Пользователь</option>
         </select>
         <span class="user-card__hint" id="roleHint">Может редактировать задачи и справочники</span>
+        <button type="button" class="link-btn user-only" id="adminLoginBtn" title="Войти с паролем владельца">Войти как администратор</button>
       </div>
     </div>
 

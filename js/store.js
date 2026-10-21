@@ -10,6 +10,12 @@ window.CAL = window.CAL || {};
 
   const STORAGE_KEY = 'task-calendar.v1';
 
+  /* Права администратора: выдаются только этому браузеру после ввода пароля владельца.
+     Пароль хранится не текстом, а SHA-256 хэшем — чтобы его нельзя было прочитать в коде.
+     Чтобы сменить пароль: node -e "console.log(require('crypto').createHash('sha256').update('НОВЫЙ_ПАРОЛЬ').digest('hex'))" */
+  const ADMIN_KEY = 'task-calendar.admin';
+  const ADMIN_PWD_HASH = '4e1d0a7f06351f71e874ac97d7a645b4f92a0dbdd29cc169403f2f86057ac01a';
+
   const DEFAULT_PRIORITIES = {
     low:    { label: 'Низкий',   color: '#94a3b8' },
     normal: { label: 'Обычный',  color: '#3b82f6' },
@@ -156,7 +162,7 @@ window.CAL = window.CAL || {};
     people: [],
     priorities: {},
     statuses: {},
-    user: { role: 'admin' },
+    user: { role: 'user' },
     view: 'month',
     cursor: new Date(),          // текущая дата навигации
     selectedDate: todayKey(),
@@ -311,14 +317,58 @@ window.CAL = window.CAL || {};
     return state.user.role === 'admin';
   }
 
+  /** Выдан ли этому браузеру ключ администратора. */
+  function hasAdminGrant() {
+    try {
+      return localStorage.getItem(ADMIN_KEY) === '1';
+    } catch (err) {
+      return false;
+    }
+  }
+
+  /** SHA-256 от строки -> hex. */
+  function sha256(text) {
+    return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+      .then((buf) => Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, '0')).join(''));
+  }
+
+  /** Проверка пароля владельца. При успехе выдаёт права администратора этому браузеру. */
+  function unlockAdmin(password) {
+    if (!password) return Promise.resolve(false);
+    return sha256(String(password)).then((hash) => {
+      if (hash !== ADMIN_PWD_HASH) return false;
+      try { localStorage.setItem(ADMIN_KEY, '1'); } catch (err) { /* приватный режим */ }
+      state.user.role = 'admin';
+      save();
+      emit();
+      return true;
+    });
+  }
+
+  /** Снятие прав администратора в этом браузере (возврат к режиму просмотра). */
+  function lockAdmin() {
+    try { localStorage.removeItem(ADMIN_KEY); } catch (err) { /* пусто */ }
+    state.user.role = 'user';
+    save();
+    emit();
+  }
+
   function setRole(role) {
+    if (role === 'user') { lockAdmin(); return; }
+    if (role === 'admin') {
+      if (!hasAdminGrant()) return;
+      state.user.role = 'admin';
+      save();
+      emit();
+      return;
+    }
     if (!ROLES[role]) return;
     state.user.role = role;
     emit();
   }
 
   function normalizeUser(raw) {
-    const role = raw && ROLES[raw.role] ? raw.role : 'admin';
+    const role = raw && ROLES[raw.role] ? raw.role : 'user';
     return { role: role };
   }
 
@@ -359,6 +409,7 @@ window.CAL = window.CAL || {};
       state.priorities = normalizeDict(parsed.priorities, DEFAULT_PRIORITIES);
       state.statuses = normalizeDict(parsed.statuses, DEFAULT_STATUSES);
       state.user = normalizeUser(parsed.user);
+      if (!hasAdminGrant()) state.user.role = 'user';
       state.tasks = Array.isArray(parsed.tasks) ? parsed.tasks.map(normalizeTask) : [];
       sanitizeTasks();
     } catch (err) {
@@ -681,7 +732,7 @@ window.CAL = window.CAL || {};
     addPerson, updatePerson, removePerson, nextPersonColor,
     dictList, dictEntry, dictLabel, dictColor, dictUsage, nextDictColor,
     dictAdd, dictUpdate, dictRemove,
-    isAdmin, setRole,
+    isAdmin, setRole, unlockAdmin, lockAdmin, hasAdminGrant,
     matchesFilters, visibleTasks, tasksByDate, tasksInRange, isOverdue,
     stats, exportData, importData, resetAll
   };
