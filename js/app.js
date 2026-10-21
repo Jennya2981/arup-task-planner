@@ -9,6 +9,8 @@
 
   const dom = {};
   let searchTimer = null;
+  let syncTick = null;
+  let syncPeriod = 0;
 
   function cacheElements() {
     [
@@ -45,16 +47,29 @@
 
   /** Период опроса: у владельца чаще, у посетителей — реже (лимит запросов). */
   function syncInterval() {
-    return store.isAdmin() ? 20000 : 90000;
+    const base = store.isAdmin() ? 20000 : 90000;
+    return (CAL.db && CAL.db.suggestedInterval) ? CAL.db.suggestedInterval(base) : base;
   }
 
   function startSync() {
     if (!store.isShared() || !CAL.db) return;
-    CAL.db.stopPolling();
-    CAL.db.startPolling(() => {
+    syncTick = () => {
       if (document.visibilityState === 'hidden') return;
       store.refresh();
-    }, syncInterval());
+      resync();
+    };
+    syncPeriod = syncInterval();
+    CAL.db.startPolling(syncTick, syncPeriod);
+  }
+
+  /** Период может измениться, когда кончается квота запросов без ключа. */
+  function resync() {
+    if (!CAL.db || !syncTick) return;
+    const want = syncInterval();
+    if (want !== syncPeriod) {
+      syncPeriod = want;
+      CAL.db.startPolling(syncTick, syncPeriod);
+    }
   }
 
   /** Индикатор связи с общим календарём. */

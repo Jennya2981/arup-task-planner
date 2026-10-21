@@ -19,6 +19,7 @@ window.CAL = window.CAL || {};
   let pollTimer = null;
   let lastSha = null;
   let limitedUntil = 0;   // до какого момента действует лимит запросов без ключа
+  let limit = { remaining: null, resetAt: 0 };   // состояние квоты запросов без ключа
 
   /* ----------------------------- Настройки ------------------------------- */
 
@@ -105,10 +106,34 @@ window.CAL = window.CAL || {};
     return data;
   }
 
+  /** Запоминаем, сколько запросов без ключа ещё осталось и когда квота обновится. */
+  function readLimit(res) {
+    if (!res || !res.headers) return;
+    const rem = res.headers.get('x-ratelimit-remaining');
+    const reset = res.headers.get('x-ratelimit-reset');
+    if (rem !== null && rem !== undefined) limit.remaining = Number(rem);
+    if (reset !== null && reset !== undefined) limit.resetAt = Number(reset) * 1000;
+  }
+
+  /** Запросы без ключа: 60 в час на адрес. Квота кончилась или почти кончилась. */
+  function blocked() {
+    if (limitedUntil && Date.now() < limitedUntil) return true;
+    if (limit.remaining !== null && limit.remaining <= 2 && limit.resetAt > Date.now()) return true;
+    return false;
+  }
+
+  /** Рекомендуемый период опроса: чем меньше осталось квоты, тем реже. */
+  function suggestedInterval(base) {
+    if (blocked()) return 300000;                    // кэш GitHub обновляется раз в 5 минут
+    if (limit.remaining !== null && limit.remaining < 10) return 180000;
+    return base;
+  }
+
   /** Чтение через API: данные свежие сразу после записи. */
   async function loadApi(token) {
     const headers = token ? authHeaders(token) : { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
     const res = await fetch(API + contentsPath(), { headers, cache: 'no-store' });
+    if (!token) readLimit(res);
     if (!res.ok) {
       const err = new Error('хранилище ответило ' + res.status);
       err.status = res.status;
@@ -123,18 +148,18 @@ window.CAL = window.CAL || {};
    * Запасной путь: открытая ссылка на файл. GitHub отдаёт её из кэша
    * (до 5 минут), поэтому помечаем состояние как «возможно устарело».
    */
-  async function loadRaw() {
+  async function loadRaw(reason) {
     const res = await fetch(rawUrl(), { cache: 'no-store' });
     if (!res.ok) throw new Error('хранилище ответило ' + res.status);
-    setStatus('warn', 'показаны данные из кэша GitHub, они могут отставать');
+    setStatus('warn', reason || 'показаны данные из кэша GitHub, они могут отставать');
     return check(await res.json());
   }
 
   /**
    * Чтение календаря.
    * С ключом — через API: без ограничений и сразу после записи.
-   * Без ключа — тоже через API (60 запросов в час на адрес); если лимит
-   * исчерпан, работаем с открытой ссылкой.
+   * Без ключа — тоже через API (60 запросов в час на адрес); когда квота
+   * кончается, работаем с открытой ссылкой и возвращаемся к API после сброса.
    */
   async function load() {
     const token = getToken();
@@ -144,8 +169,10 @@ window.CAL = window.CAL || {};
       return data;
     }
 
-    const limited = limitedUntil && Date.now() < limitedUntil;
-    if (limited) return loadRaw();
+    if (blocked()) {
+      limitedUntil = Math.max(limitedUntil, limit.resetAt || Date.now() + 10 * 60 * 1000);
+      return loadRaw('лимит запросов GitHub исчерпан, показан кэш (задержка до 5 минут)');
+    }
 
     try {
       const data = await loadApi('');
@@ -155,7 +182,7 @@ window.CAL = window.CAL || {};
     } catch (err) {
       if (err.status !== 403 && err.status !== 429) throw err;
       limitedUntil = Date.now() + 10 * 60 * 1000;
-      return loadRaw();
+      return loadRaw('лимит запросов GitHub исчерпан, показан кэш (задержка до 5 минут)');
     }
   }
 
@@ -278,7 +305,7 @@ window.CAL = window.CAL || {};
   }
 
   CAL.db = {
-    enabled, pollMs, load, save, verify, readCache,
+    enabled, pollMs, load, save, verify, readCache, suggestedInterval,
     getToken, setToken, clearToken, hasToken,
     setStatus, onStatus, getStatus, startPolling, stopPolling
   };
