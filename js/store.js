@@ -183,6 +183,7 @@ window.CAL = window.CAL || {};
   let saveTimer = null;    // отложенная запись в общее хранилище
   let dirty = false;       // есть несохранённые правки — их нельзя затирать опросом
   let appliedAt = 0;       // метка времени последних принятых данных (из exportedAt)
+  let _prevSnap = null;    // предыдущий снимок tasks/users — для поиска событий уведомлений
 
   /* --------------------------- Пользователи/сессия ----------------------- */
 
@@ -308,6 +309,135 @@ window.CAL = window.CAL || {};
     if (next.length === list.length) return;
     state.users = next;
     emit(true);
+  }
+
+  /* --------------------- Уведомления (колокольчик) ---------------------- */
+  /* Хранятся локально в браузере получателя. Общий файл задаёт лишь события:
+     кому назначили/перенесли задачу — по привязке user.assigneeId. */
+
+  const NOTIF_KEY = 'task-calendar.notifications';
+  const NOTIF_SEEN_KEY = 'task-calendar.notifSeen';
+  const NOTIF_LIMIT = 100;
+
+  function loadNotifications() {
+    try {
+      const raw = localStorage.getItem(NOTIF_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function saveNotifications(list) {
+    try {
+      localStorage.setItem(NOTIF_KEY, JSON.stringify((list || []).slice(-NOTIF_LIMIT)));
+    } catch (err) { /* приватный режим */ }
+  }
+
+  function loadSeen() {
+    try {
+      const raw = localStorage.getItem(NOTIF_SEEN_KEY);
+      const seen = raw ? JSON.parse(raw) : [];
+      return Array.isArray(seen) ? seen : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function saveSeen(list) {
+    try {
+      localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify(list || []));
+    } catch (err) { /* приватный режим */ }
+  }
+
+  function addNotification(entry) {
+    if (!entry || !entry.id) return null;
+    const list = loadNotifications();
+    if (list.some((n) => n.id === entry.id)) return null;
+    const item = {
+      id: String(entry.id),
+      kind: String(entry.kind || 'info'),
+      taskId: entry.taskId ? String(entry.taskId) : '',
+      title: String(entry.title || ''),
+      text: String(entry.text || ''),
+      at: entry.at || new Date().toISOString()
+    };
+    list.push(item);
+    saveNotifications(list);
+    return item;
+  }
+
+  function clearNotifications() {
+    saveNotifications([]);
+    saveSeen([]);
+  }
+
+  function markAllRead() {
+    saveSeen(loadNotifications().map((n) => n.id));
+    emit(false);
+  }
+
+  function unreadCount() {
+    const seen = new Set(loadSeen());
+    return loadNotifications().filter((n) => !seen.has(n.id)).length;
+  }
+
+  /** Моя привязка к ответственному: сессия пользователя или её отсутствие. */
+  function myAssigneeId() {
+    const s = getUserSession();
+    return s && s.assigneeId ? String(s.assigneeId) : '';
+  }
+
+  /**
+   * Сравнивает свежие данные с предыдущим снимком и создаёт уведомления
+   * о назначении задачи и о переносе даты/времени.
+   */
+  function scanForNotifications(data) {
+    const prev = _prevSnap;
+    const me = myAssigneeId();
+
+    if (prev && me) {
+      const prevTasks = new Map((prev.tasks || []).map((t) => [t.id, t]));
+      (data.tasks || []).forEach((task) => {
+        const before = prevTasks.get(task.id);
+        const person = state.people.find((p) => p.id === task.assigneeId);
+
+        // Назначение: задачу только что передали мне.
+        if (task.assigneeId === me && (!before || before.assigneeId !== me)) {
+          addNotification({
+            id: 'assign:' + task.id + ':' + (task.updatedAt || task.date),
+            kind: 'assign',
+            taskId: task.id,
+            title: 'Назначена задача',
+            text: task.title + (person ? ' — ' + person.name : '')
+          });
+          return;
+        }
+
+        if (!before || before.assigneeId !== me || task.assigneeId !== me) return;
+
+        // Перенос даты/времени: у меня изменились дата или время начала.
+        const moved = before.date !== task.date ||
+          (before.startTime || '') !== (task.startTime || '');
+        if (moved) {
+          addNotification({
+            id: 'move:' + task.id + ':' + (task.updatedAt || task.date),
+            kind: 'move',
+            taskId: task.id,
+            title: 'Перенос задачи',
+            text: task.title + ' → ' +
+              fmtDayLong(fromKey(task.date)) + (task.startTime ? ', ' + fmtTime(task.startTime) : '')
+          });
+        }
+      });
+    }
+
+    _prevSnap = {
+      tasks: (data.tasks || []).map((t) => ({
+        id: t.id, assigneeId: t.assigneeId, date: t.date, startTime: t.startTime
+      }))
+    };
   }
 
   function subscribe(fn) { listeners.push(fn); }

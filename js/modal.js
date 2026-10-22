@@ -51,6 +51,18 @@
     dom.userProfileError = document.getElementById('userProfileError');
     dom.notifUsersModal = document.getElementById('notifUsersModal');
     dom.notifUsersList = document.getElementById('notifUsersList');
+
+    dom.userRegBtn = document.getElementById('userRegBtn');
+    dom.userLoginBtn = document.getElementById('userLoginBtn');
+    dom.userProfileBtn = document.getElementById('userProfileBtn');
+    dom.userLogoutBtn = document.getElementById('userLogoutBtn');
+    dom.notifUsersBtn = document.getElementById('notifUsersBtn');
+
+    dom.bellModal = document.getElementById('bellModal');
+    dom.bellList = document.getElementById('bellList');
+    dom.bellHint = document.getElementById('bellHint');
+    dom.bellReadAll = document.getElementById('bellReadAll');
+    dom.bellBtn = document.getElementById('bellBtn');
   }
 
   /* --------------------------- Открытие / закрытие ---------------------- */
@@ -468,6 +480,282 @@
     }, opts.duration || (opts.actionLabel ? 6000 : 2600));
   }
 
+  /* ------------------------- Пользователи / сессия ---------------------- */
+
+  /** Список ответственных для выпадающего списка (значение — id ответственного). */
+  function assigneeOptions(selected) {
+    return ['<option value="">— не привязан —</option>']
+      .concat(state.people.map((p) =>
+        '<option value="' + escapeHtml(p.id) + '"' + (p.id === selected ? ' selected' : '') + '>' +
+        escapeHtml(p.name) + '</option>'))
+      .join('');
+  }
+
+  function openUserReg() {
+    dom.userRegForm.reset();
+    dom.userRegError.hidden = true;
+    dom.userRegForm.elements.assigneeId.innerHTML = assigneeOptions('');
+    openModal(dom.userRegModal);
+    setTimeout(() => dom.userRegForm.elements.login.focus(), 30);
+  }
+
+  function submitUserReg(event) {
+    event.preventDefault();
+    const form = dom.userRegForm;
+    const login = form.elements.login.value.trim();
+    const password = form.elements.password.value;
+    const email = form.elements.email.value.trim();
+    const newName = form.elements.newAssigneeName.value.trim();
+    let assigneeId = form.elements.assigneeId.value;
+
+    dom.userRegError.hidden = true;
+
+    if (!login || login.length < 3) return showUserError('Логин должен быть не короче 3 символов');
+    if (!password || password.length < 4) return showUserError('Пароль должен быть не короче 4 символов');
+    if (!/^[A-Za-z0-9_]+$/.test(login)) return showUserError('Логин: только латиница, цифры и подчёркивание');
+    if (store.findUserByLogin(login)) return showUserError('Такой логин уже занят');
+    if (!assigneeId && !newName) return showUserError('Выберите ответственного или введите нового');
+
+    if (newName) {
+      const person = store.addPerson(newName, store.nextPersonColor());
+      assigneeId = person.id;
+    }
+
+    store.sha256Hex(password).then((passHash) => {
+      const user = {
+        id: CAL.utils.uid('u'),
+        login: login,
+        passHash: passHash,
+        email: email,
+        assigneeId: assigneeId
+      };
+      store.upsertUser(user);
+      store.saveUserSession({ id: user.id, login: user.login, assigneeId: user.assigneeId, email: user.email });
+      closeModal(dom.userRegModal);
+      showToast('Регистрация выполнена: ' + login);
+      if (CAL.app && CAL.app.updateUserSessionUI) CAL.app.updateUserSessionUI();
+    });
+    return undefined;
+  }
+
+  function showUserError(message) {
+    dom.userRegError.textContent = message;
+    dom.userRegError.hidden = false;
+  }
+
+  function openUserLogin() {
+    dom.userLoginForm.reset();
+    dom.userLoginError.hidden = true;
+    openModal(dom.userLoginModal);
+    setTimeout(() => dom.userLoginForm.elements.login.focus(), 30);
+  }
+
+  function submitUserLogin(event) {
+    event.preventDefault();
+    const form = dom.userLoginForm;
+    const login = form.elements.login.value.trim();
+    const password = form.elements.password.value;
+    dom.userLoginError.hidden = true;
+
+    const user = store.findUserByLogin(login);
+    if (!user || !user.passHash) {
+      dom.userLoginError.textContent = 'Пользователь не найден';
+      dom.userLoginError.hidden = false;
+      return;
+    }
+    store.sha256Hex(password).then((passHash) => {
+      if (passHash !== user.passHash) {
+        dom.userLoginError.textContent = 'Неверный пароль';
+        dom.userLoginError.hidden = false;
+        return;
+      }
+      store.saveUserSession({ id: user.id, login: user.login, assigneeId: user.assigneeId, email: user.email });
+      closeModal(dom.userLoginModal);
+      showToast('Вы вошли как ' + user.login);
+      if (CAL.app && CAL.app.updateUserSessionUI) CAL.app.updateUserSessionUI();
+    });
+  }
+
+  function fillProfileForm(user) {
+    const form = dom.userProfileForm;
+    form.elements.login.value = user.login;
+    form.elements.email.value = user.email || '';
+    form.elements.assigneeId.innerHTML = assigneeOptions(user.assigneeId);
+    form.elements.bitrixUserId.value = (user.contacts && user.contacts.bitrixUserId) || '';
+    form.elements.ch_bitrix.checked = (user.channels || []).indexOf('bitrix') !== -1;
+    form.elements.ch_email.checked = (user.channels || []).indexOf('email') !== -1;
+    form.elements.ev_assign.checked = user.notify.onAssign !== false;
+    form.elements.ev_move.checked = user.notify.onMove !== false;
+    form.elements.ev_remind.checked = user.notify.remind !== false;
+    const before = user.notify.beforeMinutes || [15, 30, 60];
+    [5, 10, 15, 30, 45, 60, 90, 120].forEach((m) => {
+      const box = form.elements['m' + m];
+      if (box) box.checked = before.indexOf(m) !== -1;
+    });
+    dom.userProfileId = user.id;
+  }
+
+  function openUserProfile(userId) {
+    let user = null;
+    if (userId && store.isAdmin()) {
+      user = store.getUsers().find((u) => u.id === userId) || null;
+    } else {
+      const s = store.getUserSession();
+      user = s ? store.getUsers().find((u) => u.id === s.id) : null;
+    }
+    if (!user) {
+      showToast('Профиль не найден');
+      return;
+    }
+    dom.userProfileError.hidden = true;
+    fillProfileForm(user);
+    openModal(dom.userProfileModal);
+  }
+
+  function submitUserProfile(event) {
+    event.preventDefault();
+    const form = dom.userProfileForm;
+    const id = dom.userProfileId;
+    const user = store.getUsers().find((u) => u.id === id);
+    if (!user) return;
+
+    const channels = [];
+    if (form.elements.ch_bitrix.checked) channels.push('bitrix');
+    if (form.elements.ch_email.checked) channels.push('email');
+
+    const beforeMinutes = [5, 10, 15, 30, 45, 60, 90, 120].filter((m) => {
+      const box = form.elements['m' + m];
+      return box && box.checked;
+    });
+
+    store.upsertUser(Object.assign({}, user, {
+      email: form.elements.email.value.trim(),
+      assigneeId: form.elements.assigneeId.value,
+      contacts: { bitrixUserId: form.elements.bitrixUserId.value.trim() },
+      channels: channels,
+      notify: {
+        onAssign: form.elements.ev_assign.checked,
+        onMove: form.elements.ev_move.checked,
+        remind: form.elements.ev_remind.checked,
+        beforeMinutes: beforeMinutes.length ? beforeMinutes : [15, 30, 60]
+      }
+    }));
+
+    const s = store.getUserSession();
+    if (s && s.id === id) {
+      s.assigneeId = form.elements.assigneeId.value;
+      s.email = form.elements.email.value.trim();
+      store.saveUserSession(s);
+    }
+    closeModal(dom.userProfileModal);
+    showToast('Профиль сохранён');
+    if (CAL.app && CAL.app.updateUserSessionUI) CAL.app.updateUserSessionUI();
+  }
+
+  function openNotifUsers() {
+    if (!store.isAdmin()) return;
+    renderNotifUsers();
+    openModal(dom.notifUsersModal);
+  }
+
+  function renderNotifUsers() {
+    const users = store.getUsers();
+    if (!users.length) {
+      dom.notifUsersList.innerHTML = '<li class="modal__text">Пользователи ещё не зарегистрированы.</li>';
+      return;
+    }
+    dom.notifUsersList.innerHTML = users.map((u) => {
+      const person = store.getPerson(u.assigneeId);
+      const who = person ? person.name : '—';
+      return `
+        <li class="person-row">
+          <span class="person-row__dot" style="background:${escapeHtml(person ? person.color : '#94a3b8')}">${escapeHtml(initials(u.login))}</span>
+          <span class="person-row__name">${escapeHtml(u.login)}</span>
+          <span class="person-row__count">${escapeHtml(who)}${u.email ? ' · ' + escapeHtml(u.email) : ''}</span>
+          <button type="button" class="mini-btn" data-notif-user-edit="${escapeHtml(u.id)}">Настроить</button>
+          <button type="button" class="mini-btn mini-btn--danger" data-notif-user-delete="${escapeHtml(u.id)}">Удалить</button>
+        </li>`;
+    }).join('');
+  }
+
+  function bindUserEvents() {
+    const regForm = dom.userRegForm;
+    const loginForm = dom.userLoginForm;
+    const profileForm = dom.userProfileForm;
+    if (regForm) regForm.addEventListener('submit', submitUserReg);
+    if (loginForm) loginForm.addEventListener('submit', submitUserLogin);
+    if (profileForm) profileForm.addEventListener('submit', submitUserProfile);
+
+    if (dom.userRegBtn) dom.userRegBtn.addEventListener('click', openUserReg);
+    if (dom.userLoginBtn) dom.userLoginBtn.addEventListener('click', openUserLogin);
+    if (dom.userProfileBtn) dom.userProfileBtn.addEventListener('click', () => openUserProfile());
+    if (dom.notifUsersBtn) dom.notifUsersBtn.addEventListener('click', openNotifUsers);
+    if (dom.userLogoutBtn) {
+      dom.userLogoutBtn.addEventListener('click', () => {
+        store.saveUserSession(null);
+        showToast('Вы вышли из профиля уведомлений');
+        if (CAL.app && CAL.app.updateUserSessionUI) CAL.app.updateUserSessionUI();
+      });
+    }
+
+    if (dom.notifUsersList) {
+      dom.notifUsersList.addEventListener('click', (event) => {
+        const edit = event.target.closest('[data-notif-user-edit]');
+        if (edit) { openUserProfile(edit.getAttribute('data-notif-user-edit')); return; }
+        const del = event.target.closest('[data-notif-user-delete]');
+        if (del) {
+          const id = del.getAttribute('data-notif-user-delete');
+          confirmDialog('Удалить пользователя?', 'Профиль уведомлений будет удалён.', () => {
+            store.deleteUser(id);
+            const s = store.getUserSession();
+            if (s && s.id === id) store.saveUserSession(null);
+            renderNotifUsers();
+            if (CAL.app && CAL.app.updateUserSessionUI) CAL.app.updateUserSessionUI();
+          }, 'Удалить');
+        }
+      });
+    }
+  }
+
+  /* --------------------------- Колокольчик ------------------------------ */
+
+  function openBell() {
+    renderBell();
+    openModal(dom.bellModal);
+  }
+
+  function renderBell() {
+    const list = store.loadNotifications().slice().reverse();
+    if (!list.length) {
+      dom.bellList.innerHTML = '<li class="modal__text">Пока нет уведомлений.</li>';
+      return;
+    }
+    const fmt = (iso) => {
+      const d = new Date(iso);
+      return isNaN(d.getTime()) ? '' :
+        d.getDate() + ' ' + CAL.MONTHS_GEN[d.getMonth()] + ', ' +
+        String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+    };
+    dom.bellList.innerHTML = list.map((n) => `
+      <li class="person-row">
+        <span class="person-row__dot" style="background:${n.kind === 'assign' ? '#4f46e5' : n.kind === 'move' ? '#f59e0b' : '#94a3b8'}">${n.kind === 'assign' ? '★' : n.kind === 'move' ? '↻' : '•'}</span>
+        <span class="person-row__name">${escapeHtml(n.title)}</span>
+        <span class="person-row__count">${escapeHtml(n.text)}<br><small>${escapeHtml(fmt(n.at))}</small></span>
+      </li>`).join('');
+  }
+
+  function bindBellEvents() {
+    if (dom.bellBtn) dom.bellBtn.addEventListener('click', openBell);
+    if (dom.bellReadAll) {
+      dom.bellReadAll.addEventListener('click', () => {
+        store.markAllRead();
+        renderBell();
+        if (CAL.app && CAL.app.updateBellUI) CAL.app.updateBellUI();
+        showToast('Все уведомления отмечены прочитанными');
+      });
+    }
+  }
+
   /* ------------------------------ Export ------------------------------- */
 
   /* --------------------------- Вход владельца --------------------------- */
@@ -530,12 +818,17 @@
     showToast,
     openTokenModal,
     submitToken,
+    openModal,
+    closeModal,
+    isOpen,
     bindUserEvents,
     openUserReg,
     openUserLogin,
     openUserProfile,
     openNotifUsers,
+    renderNotifUsers,
     bindBellEvents,
-    openBell
+    openBell,
+    get editingTaskId() { return editingTaskId; }
   };
 })(window.CAL);

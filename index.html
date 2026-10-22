@@ -437,6 +437,8 @@
       <button type="button" class="btn" data-close>Закрыть</button>
     </footer>
   </div>
+</div>
+
 <!-- ================= Уведомления в календаре ================= -->
 <div class="modal" id="bellModal" hidden>
   <div class="modal__backdrop" data-close></div>
@@ -446,9 +448,9 @@
       <button type="button" class="icon-btn" data-close title="Закрыть (Esc)">✕</button>
     </header>
     <div class="modal__body">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:8px">
         <span class="modal__text" id="bellHint">Уведомления появятся при назначении, переносе или напоминании</span>
-        <button class="link-btn" id="bellReadAll">Отметить все прочитанными</button>
+        <button class="link-btn" id="bellReadAll" style="flex:0 0 auto;white-space:nowrap">Отметить все прочитанными</button>
       </div>
       <ul class="people-list" id="bellList"></ul>
     </div>

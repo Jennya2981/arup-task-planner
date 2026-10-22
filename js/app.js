@@ -59,6 +59,28 @@
       dom.bellBadge.style.display = 'none';
     }
   }
+
+  function updateUserSessionUI() {
+    const s = store.getUserSession ? store.getUserSession() : null;
+    if (dom.userRegBtn) dom.userRegBtn.hidden = !!s;
+    if (dom.userLoginBtn) dom.userLoginBtn.hidden = !!s;
+    if (dom.userProfileBtn) dom.userProfileBtn.hidden = !s;
+    if (dom.userLogoutBtn) dom.userLogoutBtn.hidden = !s;
+    const isAdmin = store.isAdmin ? store.isAdmin() : false;
+    if (dom.notifUsersBtn) dom.notifUsersBtn.hidden = !isAdmin;
+    if (dom.userSessionHint) {
+      if (s) {
+        dom.userSessionHint.hidden = false;
+        dom.userSessionHint.textContent = 'Уведомления: ' + s.login;
+      } else {
+        dom.userSessionHint.hidden = true;
+        dom.userSessionHint.textContent = '';
+      }
+    }
+    updateBellUI();
+    if (CAL.modal && CAL.modal.renderNotifUsers && isAdmin) CAL.modal.renderNotifUsers();
+  }
+
   function syncInterval() {
     const base = store.isAdmin() ? 20000 : 90000;
     return (CAL.db && CAL.db.suggestedInterval) ? CAL.db.suggestedInterval(base) : base;
