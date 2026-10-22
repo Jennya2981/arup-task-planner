@@ -162,6 +162,7 @@ window.CAL = window.CAL || {};
     people: [],
     priorities: {},
     statuses: {},
+    users: [],
     user: { role: 'user' },
     view: 'month',
     cursor: new Date(),          // текущая дата навигации
@@ -182,6 +183,132 @@ window.CAL = window.CAL || {};
   let saveTimer = null;    // отложенная запись в общее хранилище
   let dirty = false;       // есть несохранённые правки — их нельзя затирать опросом
   let appliedAt = 0;       // метка времени последних принятых данных (из exportedAt)
+
+  /* --------------------------- Пользователи/сессия ----------------------- */
+
+  const USER_SESSION_KEY = 'task-calendar.userSession';
+  let userSession = null;  // { id, login, assigneeId, email, role: 'user'|'admin' }
+
+  function loadUserSession() {
+    try {
+      const raw = localStorage.getItem(USER_SESSION_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      if (!s || !s.id || !s.login) return null;
+      return s;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function saveUserSession(s) {
+    try {
+      if (!s) {
+        localStorage.removeItem(USER_SESSION_KEY);
+        userSession = null;
+        return;
+      }
+      localStorage.setItem(USER_SESSION_KEY, JSON.stringify(s));
+      userSession = s;
+    } catch (err) {
+      userSession = s || null;
+    }
+  }
+
+  function getUserSession() {
+    if (userSession === undefined) userSession = loadUserSession();
+    if (userSession === undefined) userSession = null;
+    return userSession;
+  }
+
+  function sha256Hex(text) {
+    try {
+      const enc = new TextEncoder().encode(String(text || ''));
+      return crypto.subtle.digest('SHA-256', enc).then((buf) => {
+        const arr = Array.from(new Uint8Array(buf));
+        return arr.map((b) => b.toString(16).padStart(2, '0')).join('');
+      });
+    } catch (err) {
+      // Фоллбек для старых окружений (редко)
+      let h = 0;
+      const s = String(text || '');
+      for (let i = 0; i < s.length; i++) h = ( (h << 5) - h ) + s.charCodeAt(i), h |= 0;
+      return Promise.resolve(('00000000' + (h >>> 0).toString(16)).slice(-8));
+    }
+  }
+
+  function ensureUsers(data) {
+    if (!data || typeof data !== 'object') return [];
+    if (!Array.isArray(data.users)) return [];
+    return data.users
+      .filter((u) => u && u.id && u.login && u.passHash)
+      .map((u) => ({
+        id: String(u.id),
+        login: String(u.login).trim(),
+        passHash: String(u.passHash),
+        email: u.email ? String(u.email).trim() : '',
+        assigneeId: u.assigneeId ? String(u.assigneeId) : '',
+        contacts: {
+          bitrixUserId: u.contacts && u.contacts.bitrixUserId ? String(u.contacts.bitrixUserId).trim() : ''
+        },
+        notify: {
+          onAssign: u.notify && u.notify.onAssign !== false,
+          onMove: u.notify && u.notify.onMove !== false,
+          remind: u.notify && u.notify.remind !== false,
+          beforeMinutes: Array.isArray(u.notify && u.notify.beforeMinutes) ? u.notify.beforeMinutes.filter((n) => typeof n === 'number') : [15, 30, 60]
+        },
+        channels: Array.isArray(u.channels) && u.channels.length ? u.channels.filter((c) => c === 'bitrix' || c === 'email') : ['bitrix'],
+        createdAt: u.createdAt || new Date().toISOString(),
+        updatedAt: u.updatedAt || new Date().toISOString()
+      }));
+  }
+
+  function getUsers() {
+    return ensureUsers(state);
+  }
+
+  function findUserByLogin(login) {
+    const l = String(login || '').trim().toLowerCase();
+    if (!l) return null;
+    return getUsers().find((u) => u.login.toLowerCase() === l) || null;
+  }
+
+  function upsertUser(user) {
+    if (!user || !user.id) return;
+    const list = ensureUsers(state);
+    const idx = list.findIndex((u) => u.id === user.id);
+    const now = new Date().toISOString();
+    const normalized = {
+      id: String(user.id),
+      login: String(user.login || '').trim(),
+      passHash: String(user.passHash || ''),
+      email: user.email ? String(user.email).trim() : '',
+      assigneeId: user.assigneeId ? String(user.assigneeId) : '',
+      contacts: {
+        bitrixUserId: user.contacts && user.contacts.bitrixUserId ? String(user.contacts.bitrixUserId).trim() : ''
+      },
+      notify: {
+        onAssign: user.notify && user.notify.onAssign !== false,
+        onMove: user.notify && user.notify.onMove !== false,
+        remind: user.notify && user.notify.remind !== false,
+        beforeMinutes: Array.isArray(user.notify && user.notify.beforeMinutes) ? user.notify.beforeMinutes.filter((n) => typeof n === 'number') : [15, 30, 60]
+      },
+      channels: Array.isArray(user.channels) && user.channels.length ? user.channels.filter((c) => c === 'bitrix' || c === 'email') : ['bitrix'],
+      createdAt: user.createdAt || now,
+      updatedAt: now
+    };
+    if (idx >= 0) list[idx] = normalized; else list.push(normalized);
+    state.users = list;
+    emit(true);
+  }
+
+  function deleteUser(userId) {
+    const list = ensureUsers(state);
+    const next = list.filter((u) => u.id !== String(userId));
+    if (next.length === list.length) return;
+    state.users = next;
+    emit(true);
+  }
 
   function subscribe(fn) { listeners.push(fn); }
 
@@ -406,12 +533,13 @@ window.CAL = window.CAL || {};
   /** Текущее состояние в формате общего файла. */
   function snapshot() {
     return {
-      version: 2,
+      version: 3,
       exportedAt: new Date().toISOString(),
       people: state.people,
       tasks: state.tasks,
       priorities: state.priorities,
-      statuses: state.statuses
+      statuses: state.statuses,
+      users: ensureUsers(state)
     };
   }
 
@@ -426,11 +554,12 @@ window.CAL = window.CAL || {};
   function saveLocal() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
-        version: 2,
+        version: 3,
         tasks: state.tasks,
         people: state.people,
         priorities: state.priorities,
         statuses: state.statuses,
+        users: ensureUsers(state),
         user: state.user
       }));
     } catch (err) {
@@ -466,7 +595,8 @@ window.CAL = window.CAL || {};
       people,
       tasks,
       priorities: normalizeDict(data.priorities, DEFAULT_PRIORITIES),
-      statuses: normalizeDict(data.statuses, DEFAULT_STATUSES)
+      statuses: normalizeDict(data.statuses, DEFAULT_STATUSES),
+      users: ensureUsers(data)
     });
   }
 
@@ -475,6 +605,7 @@ window.CAL = window.CAL || {};
     state.priorities = normalizeDict(data.priorities, DEFAULT_PRIORITIES);
     state.statuses = normalizeDict(data.statuses, DEFAULT_STATUSES);
     state.tasks = Array.isArray(data.tasks) ? data.tasks.map(normalizeTask) : [];
+    state.users = ensureUsers(data);
     sanitizeTasks();
     appliedAt = Date.parse(data.exportedAt || '') || appliedAt;
   }
@@ -789,13 +920,21 @@ window.CAL = window.CAL || {};
       });
       if (parsed.priorities) mergeDict('priority', parsed.priorities);
       if (parsed.statuses) mergeDict('status', parsed.statuses);
+      if (Array.isArray(parsed.users)) {
+        const existing = new Map(getUsers().map((u) => [u.id, u]));
+        parsed.users.forEach((u) => {
+          if (!u || !u.id) return;
+          existing.set(String(u.id), ensureUsers({ users: [u] })[0]);
+        });
+        state.users = Array.from(existing.values());
+      }
     } else {
       state.people = people;
       state.tasks = parsed.tasks.map(normalizeTask);
       state.priorities = normalizeDict(parsed.priorities, DEFAULT_PRIORITIES);
       state.statuses = normalizeDict(parsed.statuses, DEFAULT_STATUSES);
+      state.users = ensureUsers(parsed);
     }
-
     sanitizeTasks();
     emit();
     return { people: people.length, tasks: parsed.tasks.length };
@@ -821,6 +960,7 @@ window.CAL = window.CAL || {};
     state.people = [];
     state.priorities = cloneDict(DEFAULT_PRIORITIES);
     state.statuses = cloneDict(DEFAULT_STATUSES);
+    state.users = [];
     state.filters.assignees.clear();
     state.filters.priorities.clear();
     state.filters.statuses.clear();
@@ -851,6 +991,7 @@ window.CAL = window.CAL || {};
     dictAdd, dictUpdate, dictRemove,
     isAdmin, setRole, unlockAdmin, lockAdmin, hasAdminGrant,
     matchesFilters, visibleTasks, tasksByDate, tasksInRange, isOverdue,
-    stats, exportData, importData, resetAll
+    stats, exportData, importData, resetAll,
+    sha256Hex, getUserSession, saveUserSession, getUsers, findUserByLogin, upsertUser, deleteUser, ensureUsers
   };
 })(window.CAL);

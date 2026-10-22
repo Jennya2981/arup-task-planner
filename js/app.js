@@ -18,7 +18,8 @@
       'searchInput', 'searchClear', 'managePeopleBtn', 'exportBtn', 'importBtn',
       'importFile', 'resetBtn', 'app', 'roleSelect', 'managePriorityBtn',
       'manageStatusBtn', 'dictFormPriority', 'dictFormStatus', 'adminLoginBtn',
-      'syncStatus'
+      'syncStatus', 'userRegBtn', 'userLoginBtn', 'userProfileBtn', 'userLogoutBtn',
+      'notifUsersBtn', 'userSessionHint'
     ].forEach((id) => { dom[id] = document.getElementById(id); });
   }
 
@@ -37,6 +38,8 @@
 
     await store.load();
     CAL.ui.render();
+    if (CAL.modal && CAL.modal.bindUserEvents) CAL.modal.bindUserEvents();
+    updateUserSessionUI();
 
     if (store.isShared()) {
       CAL.db.onStatus(renderSync);
@@ -45,7 +48,24 @@
     }
   }
 
-  /** Период опроса: у владельца чаще, у посетителей — реже (лимит запросов). */
+  function updateUserSessionUI() {
+    const s = store.getUserSession ? store.getUserSession() : null;
+    if (dom.userRegBtn) dom.userRegBtn.hidden = !!s;
+    if (dom.userLoginBtn) dom.userLoginBtn.hidden = !!s;
+    if (dom.userProfileBtn) dom.userProfileBtn.hidden = !s;
+    if (dom.userLogoutBtn) dom.userLogoutBtn.hidden = !s;
+    const isAdmin = store.isAdmin ? store.isAdmin() : false;
+    if (dom.notifUsersBtn) dom.notifUsersBtn.hidden = !isAdmin;
+    if (dom.userSessionHint) {
+      if (s) {
+        dom.userSessionHint.hidden = false;
+        dom.userSessionHint.textContent = 'Уведомления: ' + s.login;
+      } else {
+        dom.userSessionHint.hidden = true;
+        dom.userSessionHint.textContent = '';
+      }
+    }
+  }
   function syncInterval() {
     const base = store.isAdmin() ? 20000 : 90000;
     return (CAL.db && CAL.db.suggestedInterval) ? CAL.db.suggestedInterval(base) : base;
@@ -442,7 +462,7 @@
     });
   }
 
-  CAL.app = { startSync, syncInterval };
+  CAL.app = { startSync, syncInterval, updateUserSessionUI };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

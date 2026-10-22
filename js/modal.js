@@ -39,6 +39,18 @@
     dom.tokenError = document.getElementById('tokenError');
     dom.tokenSubmit = document.getElementById('tokenSubmit');
     dom.toasts = document.getElementById('toasts');
+
+    dom.userRegModal = document.getElementById('userRegModal');
+    dom.userRegForm = document.getElementById('userRegForm');
+    dom.userRegError = document.getElementById('userRegError');
+    dom.userLoginModal = document.getElementById('userLoginModal');
+    dom.userLoginForm = document.getElementById('userLoginForm');
+    dom.userLoginError = document.getElementById('userLoginError');
+    dom.userProfileModal = document.getElementById('userProfileModal');
+    dom.userProfileForm = document.getElementById('userProfileForm');
+    dom.userProfileError = document.getElementById('userProfileError');
+    dom.notifUsersModal = document.getElementById('notifUsersModal');
+    dom.notifUsersList = document.getElementById('notifUsersList');
   }
 
   /* --------------------------- Открытие / закрытие ---------------------- */
@@ -518,9 +530,10 @@
     showToast,
     openTokenModal,
     submitToken,
-    openModal,
-    closeModal,
-    isOpen,
-    get editingTaskId() { return editingTaskId; }
+    bindUserEvents,
+    openUserReg,
+    openUserLogin,
+    openUserProfile,
+    openNotifUsers
   };
 })(window.CAL);
