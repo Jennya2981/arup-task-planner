@@ -607,6 +607,7 @@ window.CAL = window.CAL || {};
     state.tasks = Array.isArray(data.tasks) ? data.tasks.map(normalizeTask) : [];
     state.users = ensureUsers(data);
     sanitizeTasks();
+    scanForNotifications(data);
     appliedAt = Date.parse(data.exportedAt || '') || appliedAt;
   }
 
@@ -992,6 +993,7 @@ window.CAL = window.CAL || {};
     isAdmin, setRole, unlockAdmin, lockAdmin, hasAdminGrant,
     matchesFilters, visibleTasks, tasksByDate, tasksInRange, isOverdue,
     stats, exportData, importData, resetAll,
-    sha256Hex, getUserSession, saveUserSession, getUsers, findUserByLogin, upsertUser, deleteUser, ensureUsers
+    sha256Hex, getUserSession, saveUserSession, getUsers, findUserByLogin, upsertUser, deleteUser, ensureUsers,
+    loadNotifications, saveNotifications, loadSeen, saveSeen, addNotification, clearNotifications, markAllRead, unreadCount, scanForNotifications
   };
 })(window.CAL);

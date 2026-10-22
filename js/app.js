@@ -19,7 +19,7 @@
       'importFile', 'resetBtn', 'app', 'roleSelect', 'managePriorityBtn',
       'manageStatusBtn', 'dictFormPriority', 'dictFormStatus', 'adminLoginBtn',
       'syncStatus', 'userRegBtn', 'userLoginBtn', 'userProfileBtn', 'userLogoutBtn',
-      'notifUsersBtn', 'userSessionHint'
+      'notifUsersBtn', 'userSessionHint', 'bellBtn', 'bellBadge'
     ].forEach((id) => { dom[id] = document.getElementById(id); });
   }
 
@@ -34,11 +34,12 @@
     bindDelegatedEvents();
     bindKeyboard();
 
-    store.subscribe(() => CAL.ui.render());
+    store.subscribe(() => { CAL.ui.render(); updateBellUI(); });
 
     await store.load();
     CAL.ui.render();
     if (CAL.modal && CAL.modal.bindUserEvents) CAL.modal.bindUserEvents();
+    if (CAL.modal && CAL.modal.bindBellEvents) CAL.modal.bindBellEvents();
     updateUserSessionUI();
 
     if (store.isShared()) {
@@ -48,22 +49,14 @@
     }
   }
 
-  function updateUserSessionUI() {
-    const s = store.getUserSession ? store.getUserSession() : null;
-    if (dom.userRegBtn) dom.userRegBtn.hidden = !!s;
-    if (dom.userLoginBtn) dom.userLoginBtn.hidden = !!s;
-    if (dom.userProfileBtn) dom.userProfileBtn.hidden = !s;
-    if (dom.userLogoutBtn) dom.userLogoutBtn.hidden = !s;
-    const isAdmin = store.isAdmin ? store.isAdmin() : false;
-    if (dom.notifUsersBtn) dom.notifUsersBtn.hidden = !isAdmin;
-    if (dom.userSessionHint) {
-      if (s) {
-        dom.userSessionHint.hidden = false;
-        dom.userSessionHint.textContent = 'Уведомления: ' + s.login;
-      } else {
-        dom.userSessionHint.hidden = true;
-        dom.userSessionHint.textContent = '';
-      }
+  function updateBellUI() {
+    if (!dom.bellBadge) return;
+    const c = store.unreadCount ? store.unreadCount() : 0;
+    if (c > 0) {
+      dom.bellBadge.textContent = c > 99 ? '99+' : String(c);
+      dom.bellBadge.style.display = 'inline-block';
+    } else {
+      dom.bellBadge.style.display = 'none';
     }
   }
   function syncInterval() {
@@ -462,7 +455,7 @@
     });
   }
 
-  CAL.app = { startSync, syncInterval, updateUserSessionUI };
+  CAL.app = { startSync, syncInterval, updateUserSessionUI, updateBellUI };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

@@ -534,6 +534,8 @@
     openUserReg,
     openUserLogin,
     openUserProfile,
-    openNotifUsers
+    openNotifUsers,
+    bindBellEvents,
+    openBell
   };
 })(window.CAL);
