@@ -249,16 +249,13 @@ window.CAL = window.CAL || {};
         passHash: String(u.passHash),
         email: u.email ? String(u.email).trim() : '',
         assigneeId: u.assigneeId ? String(u.assigneeId) : '',
-        contacts: {
-          bitrixUserId: u.contacts && u.contacts.bitrixUserId ? String(u.contacts.bitrixUserId).trim() : ''
-        },
         notify: {
           onAssign: u.notify && u.notify.onAssign !== false,
           onMove: u.notify && u.notify.onMove !== false,
           remind: u.notify && u.notify.remind !== false,
           beforeMinutes: Array.isArray(u.notify && u.notify.beforeMinutes) ? u.notify.beforeMinutes.filter((n) => typeof n === 'number') : [15, 30, 60]
         },
-        channels: Array.isArray(u.channels) && u.channels.length ? u.channels.filter((c) => c === 'bitrix' || c === 'email') : ['bitrix'],
+        channels: Array.isArray(u.channels) && u.channels.length ? u.channels.filter((c) => c === 'email') : ['email'],
         createdAt: u.createdAt || new Date().toISOString(),
         updatedAt: u.updatedAt || new Date().toISOString()
       }));
@@ -285,16 +282,13 @@ window.CAL = window.CAL || {};
       passHash: String(user.passHash || ''),
       email: user.email ? String(user.email).trim() : '',
       assigneeId: user.assigneeId ? String(user.assigneeId) : '',
-      contacts: {
-        bitrixUserId: user.contacts && user.contacts.bitrixUserId ? String(user.contacts.bitrixUserId).trim() : ''
-      },
       notify: {
         onAssign: user.notify && user.notify.onAssign !== false,
         onMove: user.notify && user.notify.onMove !== false,
         remind: user.notify && user.notify.remind !== false,
         beforeMinutes: Array.isArray(user.notify && user.notify.beforeMinutes) ? user.notify.beforeMinutes.filter((n) => typeof n === 'number') : [15, 30, 60]
       },
-      channels: Array.isArray(user.channels) && user.channels.length ? user.channels.filter((c) => c === 'bitrix' || c === 'email') : ['bitrix'],
+      channels: Array.isArray(user.channels) && user.channels.length ? user.channels.filter((c) => c === 'email') : ['email'],
       createdAt: user.createdAt || now,
       updatedAt: now
     };

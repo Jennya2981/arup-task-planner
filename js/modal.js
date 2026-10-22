@@ -581,8 +581,6 @@
     form.elements.login.value = user.login;
     form.elements.email.value = user.email || '';
     form.elements.assigneeId.innerHTML = assigneeOptions(user.assigneeId);
-    form.elements.bitrixUserId.value = (user.contacts && user.contacts.bitrixUserId) || '';
-    form.elements.ch_bitrix.checked = (user.channels || []).indexOf('bitrix') !== -1;
     form.elements.ch_email.checked = (user.channels || []).indexOf('email') !== -1;
     form.elements.ev_assign.checked = user.notify.onAssign !== false;
     form.elements.ev_move.checked = user.notify.onMove !== false;
@@ -620,7 +618,6 @@
     if (!user) return;
 
     const channels = [];
-    if (form.elements.ch_bitrix.checked) channels.push('bitrix');
     if (form.elements.ch_email.checked) channels.push('email');
 
     const beforeMinutes = [5, 10, 15, 30, 45, 60, 90, 120].filter((m) => {
@@ -631,7 +628,6 @@
     store.upsertUser(Object.assign({}, user, {
       email: form.elements.email.value.trim(),
       assigneeId: form.elements.assigneeId.value,
-      contacts: { bitrixUserId: form.elements.bitrixUserId.value.trim() },
       channels: channels,
       notify: {
         onAssign: form.elements.ev_assign.checked,
