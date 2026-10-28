@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#f8f4ea">
+<title>Система мотивации — консалтинг</title>
+<meta name="description" content="Разработаем и внедрим прозрачную систему оплаты труда и премирования, привязанную к целям компании и мотивирующую сотрудников на результат.">
+<style>
+  html { background: #f8f4ea; }
+  body { margin: 0; padding: 0; background: #f8f4ea; }
+  .ar-preview-note {
+    max-width: 1200px; margin: 0 auto; padding: 18px 56px 0;
+    font: 400 10px/1.6 "Roboto", -apple-system, "Segoe UI", Arial, sans-serif; letter-spacing: .14em;
+    text-transform: uppercase; color: #606b56;
+  }
+  @media (max-width: 700px) { .ar-preview-note { padding: 14px 20px 0; } }
+</style>
+<style>
+@import url("https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap");
+
+/* ═══════════════════════════════════════════════════════════════
+   AR LANDING — «Тихая экспертиза»
+   Все стили скоупятся в .ar-landing, чтобы не конфликтовать с Tilda.
+   Палитра: тёплая бумага, глубокий зелёный, шалфей, охра — малыми дозами.
+   Шрифт один — Roboto: Light (крупные заголовки), Regular (текст),
+   Medium (подписи, цифры, кнопки).
+   ═══════════════════════════════════════════════════════════════ */
+
+.ar-landing {
+  /* Палитра из бренд-стиля: тёплая бумага, глубокий зелёный, шалфей, охра — малыми дозами. */
+  --ar-paper: #f8f4ea;
+  --ar-cream: #fffcf3;
+  --ar-sage: #e9eee0;
+  --ar-sage-soft: #f3f5ea;
+  --ar-sage-deep: #dde5d1;
+  --ar-ink: #1e3628;
+  --ar-olive: #475a3b;
+  --ar-olive-soft: #606b56;
+  --ar-ochre: #b96a24;
+  --ar-sand: #dcc9ac;
+  --ar-line: #e6ddc9;
+  --ar-rule: rgba(30, 54, 40, 0.2);
+  --ar-rule-soft: rgba(30, 54, 40, 0.11);
+  --ar-on-dark: #fbf6e9;
+  --ar-on-dark-muted: #d8d9c6;
+  --ar-sand-on-dark: #dcc9ac;
+  --ar-sage-on-dark: #c7d2b6;
+  --ar-terracotta: #a2551a;
+  --ar-clay: #d99564;
+  --ar-golden: #846837;
+  --ar-deep-green: #243c2b;
+  --ar-olive-deep: #585b35;
+
+  /* Токены вариативности: дефолт = страница 1.
+     Ниже каждый блок переопределяется через [data-ar-page="service-N"]. */
+  --ar-accent: var(--ar-ochre);            /* волосяные акценты: номера, штрихи, буллеты */
+  --ar-btn-bg: var(--ar-ink);
+  --ar-btn-fg: var(--ar-on-dark);
+  --ar-btn-hover: var(--ar-olive);
+  --ar-btn-hover-fg: var(--ar-on-dark);
+  --ar-band-bg: var(--ar-sage-deep);       /* полоса цифр-фактов */
+  --ar-band-fg: var(--ar-ink);
+  --ar-band-label: var(--ar-olive);
+  --ar-band-line: #c6d2b4;
+  --ar-block-alt: var(--ar-sage);          /* подложка чередующихся блоков */
+  --ar-bonus-bg: var(--ar-cream);
+  --ar-bonus-label-bg: var(--ar-ink);
+  --ar-bonus-label-fg: var(--ar-on-dark);
+  --ar-badge-bg: var(--ar-olive);          /* бейдж тарифа */
+  --ar-badge-fg: var(--ar-on-dark);
+
+  /* Один шрифт на все страницы — Roboto.
+     Дисплей: Light 300 · Текст: Regular 400 · Подписи, цифры, кнопки: Medium 500 */
+  --ar-font: "Roboto", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+
+  --ar-shell: 1200px;
+  --ar-gutter: clamp(20px, 5vw, 56px);
+
+  position: relative;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: var(--ar-paper);
+  color: var(--ar-ink);
+  font-family: var(--ar-font);
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1.65;
+  font-synthesis-weight: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Сброс внутри скоупа ─────────────────────────────────────── */
+
+.ar-landing,
+.ar-landing *,
+.ar-landing *::before,
+.ar-landing *::after {
+  box-sizing: border-box;
+}
+
+.ar-landing :where(h1, h2, h3, h4, p, ul, ol, li, figure, figcaption, blockquote, dl, dt, dd, table, tr, th, td, button) {
+  margin: 0;
+  padding: 0;
+}
+
+/* !important — страховка от базовых стилей Tilda (#allrecords ul li и т.п.) */
+.ar-landing :where(ul, ol) {
+  margin: 0 !important;
+  padding-left: 0 !important;
+  list-style: none !important;
+}
+
+.ar-landing :where(ul, ol) :where(li) {
+  margin: 0 !important;
+}
+
+.ar-landing :where(p, li, h1, h2, h3, blockquote, td, th) {
+  color: inherit;
+}
+
+.ar-landing img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.ar-landing :where(button) {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.ar-landing :where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ar-landing :where(b, strong) {
+  font-weight: 500;
+}
+
+/* ── Сетка ───────────────────────────────────────────────────── */
+
+.ar-landing .ar-shell {
+  width: 100%;
+  max-width: var(--ar-shell);
+  margin-inline: auto;
+  padding-inline: var(--ar-gutter);
+}
+
+.ar-landing :where(section, div)[id] {
+  scroll-margin-top: 96px;
+}
+
+.ar-landing .ar-section-label {
+  display: block;
+  font-family: var(--ar-font);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--ar-olive);
+}
+
+/* ── Кнопки и ссылки ─────────────────────────────────────────── */
+
+.ar-landing .ar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 54px;
+  padding: 16px 28px;
+  background: var(--ar-btn-bg);
+  color: var(--ar-btn-fg);
+  border: 1px solid var(--ar-btn-bg);
+  border-radius: 2px;
+  font-family: var(--ar-font);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  text-align: center;
+  cursor: pointer;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+
+.ar-landing .ar-btn:hover {
+  background: var(--ar-btn-hover);
+  border-color: var(--ar-btn-hover);
+  color: var(--ar-btn-hover-fg);
+}
+
+.ar-landing .ar-btn__arrow {
+  display: inline-block;
+  font-family: var(--ar-font);
+  font-size: 16px;
+  line-height: 1;
+  transform: translateX(0);
+  transition: transform 0.25s ease;
+}
+
+.ar-landing .ar-btn:hover .ar-btn__arrow {
+  transform: translateX(4px);
+}
+
+.ar-landing .ar-btn--light {
+  background: var(--ar-on-dark);
+  border-color: var(--ar-on-dark);
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-btn--light:hover {
+  background: var(--ar-sand);
+  border-color: var(--ar-sand);
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ar-olive-soft);
+  font-family: var(--ar-font);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--ar-olive);
+  transition: border-color 0.25s ease, color 0.25s ease;
+}
+
+.ar-landing .ar-link:hover {
+  border-color: var(--ar-ink);
+  color: var(--ar-ink);
+}
+
+.ar-landing :where(a, button):focus-visible {
+  outline: 2px solid var(--ar-olive);
+  outline-offset: 3px;
+}
+
+.ar-landing .ar-final :where(a, button):focus-visible {
+  outline-color: var(--ar-sand);
+}
+
+/* ── Hero ────────────────────────────────────────────────────── */
+
+.ar-landing .ar-hero {
+  padding-block: clamp(40px, 7vw, 84px) clamp(44px, 6vw, 76px);
+  border-bottom: 1px solid var(--ar-rule);
+  background: var(--ar-paper);
+}
+
+.ar-landing .ar-topline {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ar-rule);
+  font-family: var(--ar-font);
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-topline__item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.ar-landing .ar-topline__num {
+  color: var(--ar-ink);
+  font-weight: 500;
+}
+
+.ar-landing .ar-topline__sep {
+  display: inline-block;
+  width: 26px;
+  height: 2px;
+  background: var(--ar-accent);
+  transform: translateY(-3px);
+}
+
+.ar-landing .ar-topline__right {
+  text-align: right;
+}
+
+.ar-landing .ar-hero__title {
+  max-width: min(100%, 1000px);
+  margin-top: clamp(28px, 5vw, 52px);
+  font-family: var(--ar-font);
+  font-size: clamp(2.35rem, 5.7vw, 4.6rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.02;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-hero__title span {
+  display: block;
+}
+
+.ar-landing .ar-hero__title-i {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--ar-olive-soft);
+}
+
+.ar-landing .ar-hero__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  grid-template-areas:
+    "lead deck"
+    "actions deck"
+    "meta meta";
+  column-gap: clamp(24px, 4vw, 56px);
+  margin-top: clamp(28px, 4.5vw, 48px);
+}
+
+.ar-landing .ar-hero__lead {
+  grid-area: lead;
+  max-width: 34ch;
+  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-hero__deck {
+  grid-area: deck;
+  align-self: end;
+  max-width: 42ch;
+  padding-top: 18px;
+  border-top: 1px solid var(--ar-rule);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-hero__actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  margin-top: clamp(24px, 3.4vw, 40px);
+}
+
+.ar-landing .ar-metarow {
+  grid-area: meta;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 clamp(16px, 3vw, 40px);
+  margin-top: clamp(32px, 4.5vw, 56px);
+  padding-top: 18px;
+  border-top: 1px solid var(--ar-rule);
+}
+
+.ar-landing .ar-metarow__item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.ar-landing .ar-metarow__item + .ar-metarow__item {
+  padding-left: clamp(16px, 3vw, 40px);
+  border-left: 1px solid var(--ar-rule-soft);
+}
+
+.ar-landing .ar-metarow__label {
+  font-family: var(--ar-font);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-metarow__value {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ar-ink);
+}
+
+/* ── Фотопластины ────────────────────────────────────────────── */
+
+.ar-landing .ar-plates {
+  padding-block: clamp(36px, 5vw, 64px) clamp(20px, 3vw, 32px);
+  background: var(--ar-ink);
+  color: var(--ar-on-dark);
+}
+
+.ar-landing .ar-plates__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: clamp(10px, 1.2vw, 18px);
+  align-items: stretch;
+  aspect-ratio: 2.7 / 1;
+}
+
+.ar-landing .ar-plates__grid--single {
+  grid-template-columns: minmax(0, 1fr);
+  aspect-ratio: 2.35 / 1;
+}
+
+.ar-landing .ar-plate {
+  min-width: 0;
+  height: 100%;
+}
+
+.ar-landing .ar-plate__frame {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: var(--ar-olive);
+}
+
+.ar-landing .ar-plate__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.92) contrast(1.03) brightness(1.02);
+}
+
+.ar-landing .ar-plates__caption {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding-bottom: 2px;
+  font-family: var(--ar-font);
+  font-size: 9.5px;
+  letter-spacing: 0.13em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--ar-sand);
+}
+
+.ar-landing .ar-plates__caption span:last-child {
+  text-align: right;
+  opacity: 0.75;
+}
+
+/* ── Цифры-факты ─────────────────────────────────────────────── */
+
+.ar-landing .ar-facts {
+  margin-top: clamp(20px, 3vw, 36px);
+  padding-block: clamp(36px, 5vw, 60px);
+  background: var(--ar-band-bg);
+  color: var(--ar-band-fg);
+}
+
+.ar-landing .ar-facts__list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 clamp(16px, 3vw, 44px);
+}
+
+.ar-landing .ar-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.ar-landing .ar-fact + .ar-fact {
+  padding-left: clamp(16px, 3vw, 44px);
+  border-left: 1px solid var(--ar-band-line);
+}
+
+.ar-landing .ar-fact__num {
+  font-family: var(--ar-font);
+  font-size: clamp(1.9rem, 3.7vw, 3.1rem);
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  line-height: 1.02;
+  color: var(--ar-band-fg);
+}
+
+.ar-landing .ar-fact__label {
+  font-family: var(--ar-font);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--ar-band-label);
+}
+
+/* ── Блоки контента ──────────────────────────────────────────── */
+
+.ar-landing .ar-block {
+  padding-block: clamp(52px, 7vw, 96px);
+  background: var(--ar-paper);
+}
+
+.ar-landing .ar-block--warm {
+  background: var(--ar-block-alt);
+}
+
+.ar-landing .ar-block + .ar-block {
+  border-top: 1px solid var(--ar-rule-soft);
+}
+
+.ar-landing .ar-block__head {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 0 clamp(12px, 2vw, 28px);
+  align-items: start;
+  margin-bottom: clamp(26px, 3.5vw, 44px);
+}
+
+.ar-landing .ar-block__num {
+  padding-top: 0.55em;
+  font-family: var(--ar-font);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  color: var(--ar-accent);
+}
+
+.ar-landing .ar-block__num::before {
+  content: "";
+  display: block;
+  width: 22px;
+  height: 2px;
+  margin-bottom: 12px;
+  background: var(--ar-accent);
+}
+
+.ar-landing .ar-block__title {
+  max-width: 22ch;
+  font-family: var(--ar-font);
+  font-size: clamp(1.7rem, 3.2vw, 2.7rem);
+  font-weight: 400;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
+  color: var(--ar-ink);
+}
+
+/* ── Проза ───────────────────────────────────────────────────── */
+
+.ar-landing .ar-prose {
+  max-width: 72ch;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.ar-landing .ar-prose p {
+  margin-bottom: 1.1em;
+  font-size: 17px;
+  line-height: 1.72;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-prose > p:first-of-type {
+  margin-bottom: 1em;
+  font-family: var(--ar-font);
+  font-size: clamp(1.25rem, 2.1vw, 1.6rem);
+  line-height: 1.45;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-prose p:last-child {
+  margin-bottom: 0;
+}
+
+.ar-landing .ar-prose__kicker {
+  margin-top: 1.6em;
+  margin-bottom: 0.7em !important;
+  font-family: var(--ar-font) !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ar-olive) !important;
+}
+
+.ar-landing .ar-list {
+  display: grid;
+  gap: 10px;
+  margin: 1.2em 0 0;
+}
+
+.ar-landing .ar-list li {
+  position: relative;
+  padding-left: 26px;
+  font-size: 16.5px;
+  line-height: 1.6;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.72em;
+  width: 14px;
+  height: 2px;
+  background: var(--ar-accent);
+}
+
+/* ── Карточки ситуаций ───────────────────────────────────────── */
+
+.ar-landing .ar-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(28px, 4vw, 64px);
+}
+
+.ar-landing .ar-card {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 0 14px;
+  padding-block: clamp(20px, 2.6vw, 30px);
+  border-top: 1px solid var(--ar-rule);
+}
+
+.ar-landing .ar-card__num {
+  padding-top: 3px;
+  font-family: var(--ar-font);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  line-height: 1.6;
+  color: var(--ar-accent);
+}
+
+.ar-landing .ar-card__num--none {
+  display: none;
+}
+
+.ar-landing .ar-card--plain {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ar-landing .ar-card__title {
+  font-family: var(--ar-font);
+  font-size: clamp(1.2rem, 1.6vw, 1.4rem);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.3;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-card__text {
+  max-width: 46ch;
+  margin-top: 8px !important;
+  font-size: 15.5px;
+  line-height: 1.65;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-cards__closing {
+  max-width: 62ch;
+  margin-top: clamp(28px, 3.5vw, 44px);
+  padding-top: 20px;
+  border-top: 1px solid var(--ar-rule);
+  font-family: var(--ar-font);
+  font-size: clamp(1.1rem, 1.7vw, 1.3rem);
+  line-height: 1.55;
+  color: var(--ar-ink);
+}
+
+/* ── Шаги ────────────────────────────────────────────────────── */
+
+.ar-landing .ar-steps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(32px, 4vw, 64px);
+  counter-reset: ar-step;
+}
+
+.ar-landing .ar-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 0 14px;
+  padding-block: clamp(18px, 2.2vw, 26px);
+  border-top: 1px solid var(--ar-rule);
+  counter-increment: ar-step;
+}
+
+.ar-landing .ar-step__num {
+  padding-top: 2px;
+  font-family: var(--ar-font);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  line-height: 1.7;
+  color: var(--ar-olive-soft);
+}
+
+.ar-landing .ar-step__title {
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-step__text {
+  margin-top: 5px !important;
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-block__intro {
+  max-width: 62ch;
+  margin-bottom: clamp(20px, 2.6vw, 32px);
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-block__note {
+  max-width: 62ch;
+  margin-top: clamp(22px, 3vw, 34px);
+  padding-left: 18px;
+  border-left: 2px solid var(--ar-accent);
+  font-family: var(--ar-font);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  line-height: 1.7;
+  color: var(--ar-olive);
+  text-transform: none;
+}
+
+/* ── Цитата и результаты ─────────────────────────────────────── */
+
+.ar-landing .ar-quote {
+  max-width: 60ch;
+  margin: 0 0 clamp(22px, 3vw, 34px);
+  padding: 6px 0 6px clamp(20px, 3vw, 34px);
+  border-left: 2px solid var(--ar-accent);
+}
+
+.ar-landing .ar-quote blockquote {
+  font-family: var(--ar-font);
+  font-size: clamp(1.35rem, 2.4vw, 1.9rem);
+  font-style: italic;
+  font-weight: 300;
+  line-height: 1.4;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-result__text {
+  max-width: 60ch;
+  margin-bottom: clamp(18px, 2.4vw, 26px);
+  font-size: 16.5px;
+  line-height: 1.65;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-bullets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(28px, 4vw, 56px);
+}
+
+.ar-landing .ar-bullet {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 0 12px;
+  align-items: start;
+  padding-block: clamp(16px, 2vw, 22px);
+  border-top: 1px solid var(--ar-rule);
+}
+
+.ar-landing .ar-bullet__mark {
+  padding-top: 1px;
+  font-family: var(--ar-font);
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--ar-accent);
+}
+
+.ar-landing .ar-bullet__title {
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-bullet__text {
+  margin-top: 4px !important;
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-bullet__text:only-child {
+  margin-top: 0 !important;
+  color: var(--ar-ink);
+}
+
+/* ── Преимущества ────────────────────────────────────────────── */
+
+.ar-landing .ar-advantages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 clamp(24px, 3.5vw, 48px);
+}
+
+.ar-landing .ar-advantage {
+  padding-block: clamp(18px, 2.2vw, 26px);
+  border-top: 1px solid var(--ar-rule);
+}
+
+.ar-landing .ar-advantage__title {
+  font-family: var(--ar-font);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-advantage__text {
+  margin-top: 10px !important;
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: var(--ar-olive);
+}
+
+/* ── Бонус ───────────────────────────────────────────────────── */
+
+.ar-landing .ar-bonus {
+  padding: clamp(24px, 3.5vw, 40px);
+  background: var(--ar-bonus-bg);
+  border: 1px solid var(--ar-sage-deep);
+}
+
+.ar-landing .ar-bonus__label {
+  display: inline-block;
+  margin-bottom: 14px;
+  padding: 4px 9px;
+  background: var(--ar-bonus-label-bg);
+  color: var(--ar-bonus-label-fg);
+  font-family: var(--ar-font);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.ar-landing .ar-bonus__title {
+  max-width: 24ch;
+  font-family: var(--ar-font);
+  font-size: clamp(1.4rem, 2.2vw, 1.8rem);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-bonus__text {
+  max-width: 70ch;
+  margin-top: 12px !important;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--ar-olive);
+}
+
+/* ── Строки-перечни (форматы, платформы) ─────────────────────── */
+
+.ar-landing .ar-rows {
+  display: grid;
+  gap: 0;
+}
+
+.ar-landing .ar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 8px 32px;
+  padding-block: clamp(16px, 2vw, 22px);
+  border-top: 1px solid var(--ar-rule);
+}
+
+.ar-landing .ar-row__title {
+  font-family: var(--ar-font);
+  font-size: clamp(1.1rem, 1.6vw, 1.3rem);
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-row__text {
+  font-size: 15.5px;
+  line-height: 1.62;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ar-landing .ar-chip {
+  padding: 9px 14px;
+  background: var(--ar-cream);
+  border: 1px solid var(--ar-sage-deep);
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-block__footnote {
+  max-width: 62ch;
+  margin-top: 16px !important;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ar-olive);
+}
+
+/* ── Таблица сравнения ───────────────────────────────────────── */
+
+.ar-landing .ar-table-wrap {
+  overflow-x: auto;
+  border-top: 2px solid var(--ar-accent);
+  border-bottom: 1px solid var(--ar-rule);
+  -webkit-overflow-scrolling: touch;
+}
+
+.ar-landing .ar-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.ar-landing .ar-table thead th {
+  padding: 14px 18px 14px 0;
+  font-family: var(--ar-font);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--ar-olive);
+  vertical-align: bottom;
+}
+
+.ar-landing .ar-table tr > *:last-child {
+  padding-right: 0;
+}
+
+.ar-landing .ar-table tr > * + * {
+  padding-left: 18px;
+  border-left: 1px solid var(--ar-rule-soft);
+}
+
+.ar-landing .ar-table tbody :where(td, th) {
+  padding-block: 18px;
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--ar-olive);
+  vertical-align: top;
+  text-align: left;
+  border-top: 1px solid var(--ar-rule-soft);
+}
+
+.ar-landing .ar-table tbody th {
+  width: 24%;
+  font-weight: 500;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-table tbody td:last-child {
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-table__hint {
+  display: none;
+  margin-bottom: 12px !important;
+  font-family: var(--ar-font);
+  font-size: 9.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ar-olive);
+}
+
+/* ── Цена ────────────────────────────────────────────────────── */
+
+.ar-landing .ar-price {
+  padding: clamp(24px, 4.5vw, 56px);
+  background: var(--ar-cream);
+  border: 1px solid var(--ar-sage-deep);
+}
+
+.ar-landing .ar-price__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: clamp(28px, 4vw, 56px);
+}
+
+.ar-landing .ar-price__label {
+  margin-bottom: 12px;
+  font-family: var(--ar-font);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-price__amount {
+  font-family: var(--ar-font);
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  line-height: 1.02;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-price__note {
+  max-width: 42ch;
+  margin-top: 16px !important;
+  font-size: 15px;
+  line-height: 1.62;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-price__side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: flex-start;
+  padding-left: clamp(0px, 2vw, 32px);
+  border-left: 1px solid var(--ar-rule-soft);
+}
+
+.ar-landing .ar-price__includes {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.ar-landing .ar-price__includes li {
+  position: relative;
+  padding-left: 22px;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-price__includes li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.68em;
+  width: 12px;
+  height: 2px;
+  background: var(--ar-accent);
+}
+
+.ar-landing .ar-price__side .ar-btn {
+  margin-top: 6px;
+}
+
+.ar-landing .ar-price__hint {
+  font-family: var(--ar-font);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  color: var(--ar-olive);
+  text-transform: none;
+}
+
+/* Тарифы */
+
+.ar-landing .ar-tiers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ar-landing .ar-tier {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(20px, 2.6vw, 30px);
+  border: 1px solid var(--ar-sage-deep);
+  background: var(--ar-paper);
+}
+
+.ar-landing .ar-tier__badge {
+  align-self: flex-start;
+  margin-bottom: 12px;
+  padding: 3px 8px;
+  background: var(--ar-badge-bg);
+  color: var(--ar-badge-fg);
+  font-family: var(--ar-font);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.ar-landing .ar-tier__title {
+  font-family: var(--ar-font);
+  font-size: clamp(1.2rem, 1.8vw, 1.5rem);
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-tier__text {
+  margin-top: 8px !important;
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-tier__amount {
+  margin-top: auto;
+  padding-top: 18px;
+  font-family: var(--ar-font);
+  font-size: clamp(1.8rem, 2.8vw, 2.3rem);
+  font-weight: 400;
+  line-height: 1.1;
+  color: var(--ar-ink);
+}
+
+.ar-landing .ar-tier__unit {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--ar-font);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  line-height: 1.5;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-price__tiernote {
+  margin-top: 18px !important;
+  font-family: var(--ar-font);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  line-height: 1.7;
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-price__bottom {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 24px;
+  margin-top: clamp(22px, 3vw, 32px);
+  padding-top: clamp(20px, 2.6vw, 28px);
+  border-top: 1px solid var(--ar-rule);
+}
+
+/* ── FAQ ─────────────────────────────────────────────────────── */
+
+.ar-landing .ar-faq {
+  max-width: 920px;
+  border-bottom: 1px solid var(--ar-rule);
+}
+
+.ar-landing .ar-faq__item {
+  border-top: 1px solid var(--ar-rule);
+}
+
+.ar-landing .ar-faq__btn {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+  padding-block: clamp(16px, 2.2vw, 22px);
+  font-weight: 400;
+  text-align: left;
+}
+
+.ar-landing .ar-faq__q-wrap {
+  font-weight: 400;
+}
+
+.ar-landing .ar-faq__q {
+  font-size: 16.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--ar-ink);
+  transition: color 0.2s ease;
+}
+
+.ar-landing .ar-faq__btn:hover .ar-faq__q {
+  color: var(--ar-olive);
+}
+
+.ar-landing .ar-faq__icon {
+  position: relative;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-top: 5px;
+}
+
+.ar-landing .ar-faq__icon::before,
+.ar-landing .ar-faq__icon::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 14px;
+  height: 1px;
+  background: var(--ar-accent);
+  transition: transform 0.3s ease, background-color 0.2s ease;
+}
+
+.ar-landing .ar-faq__icon::after {
+  transform: rotate(90deg);
+}
+
+.ar-landing .ar-faq__item.is-open .ar-faq__icon::after {
+  transform: rotate(0deg);
+  background: var(--ar-olive);
+}
+
+.ar-landing .ar-faq__item.is-open .ar-faq__icon::before {
+  background: var(--ar-olive);
+}
+
+.ar-landing .ar-faq__panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.36s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.ar-landing .ar-faq__item.is-open .ar-faq__panel {
+  grid-template-rows: 1fr;
+}
+
+.ar-landing .ar-faq__inner {
+  overflow: hidden;
+}
+
+.ar-landing .ar-faq__inner p {
+  max-width: 66ch;
+  padding: 0 40px 20px 0;
+  font-size: 15.5px;
+  line-height: 1.68;
+  color: var(--ar-olive);
+}
+
+/* ── Финал ───────────────────────────────────────────────────── */
+
+.ar-landing .ar-final {
+  padding-block: clamp(64px, 9vw, 124px);
+  border-top: 1px solid var(--ar-sage-deep);
+  background: var(--ar-ink);
+  color: var(--ar-on-dark);
+}
+
+.ar-landing .ar-final__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.85fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: end;
+}
+
+.ar-landing .ar-final__body {
+  min-width: 0;
+}
+
+.ar-landing .ar-final__figure {
+  min-width: 0;
+  margin: 0;
+}
+
+.ar-landing .ar-final__frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  background: var(--ar-olive);
+}
+
+.ar-landing .ar-final__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(0.92) contrast(1.03) brightness(1.02);
+}
+
+.ar-landing .ar-final .ar-section-label {
+  color: var(--ar-sage-on-dark);
+}
+
+.ar-landing .ar-final__title {
+  max-width: 17ch;
+  margin-top: 20px;
+  font-family: var(--ar-font);
+  font-size: clamp(2.1rem, 5vw, 4.1rem);
+  font-weight: 300;
+  letter-spacing: -0.02em;
+  line-height: 1.04;
+  color: var(--ar-on-dark);
+}
+
+.ar-landing .ar-final__title span {
+  display: block;
+}
+
+.ar-landing .ar-final__title-i {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--ar-sage-on-dark);
+}
+
+.ar-landing .ar-final__text {
+  max-width: 50ch;
+  margin-top: clamp(20px, 2.6vw, 28px);
+  font-size: clamp(1rem, 1.4vw, 1.15rem);
+  line-height: 1.6;
+  color: var(--ar-on-dark-muted);
+}
+
+.ar-landing .ar-final__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  margin-top: clamp(28px, 3.6vw, 40px);
+}
+
+.ar-landing .ar-final__note {
+  margin-top: 18px !important;
+  font-family: var(--ar-font);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  color: var(--ar-sand);
+}
+
+@media (max-width: 900px) {
+  .ar-landing .ar-final__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: clamp(28px, 6vw, 44px);
+    align-items: start;
+  }
+
+  .ar-landing .ar-final__figure {
+    order: 2;
+  }
+
+  .ar-landing .ar-final__frame {
+    aspect-ratio: 16 / 10;
+  }
+}
+
+/* ── Появление при скролле ───────────────────────────────────── */
+
+.ar-landing.ar-js [data-ar-reveal] {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.ar-landing.ar-js [data-ar-reveal].is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Адаптив ─────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+  .ar-landing .ar-hero__body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "lead"
+      "actions"
+      "deck"
+      "meta";
+    row-gap: 22px;
+  }
+
+  .ar-landing .ar-hero__lead {
+    max-width: 52ch;
+  }
+
+  .ar-landing .ar-hero__deck {
+    max-width: 62ch;
+    margin-top: 4px;
+  }
+
+  .ar-landing .ar-hero__actions {
+    margin-top: 6px;
+  }
+
+  .ar-landing .ar-price__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ar-landing .ar-price__side {
+    padding-left: 0;
+    padding-top: 24px;
+    border-left: 0;
+    border-top: 1px solid var(--ar-rule-soft);
+  }
+
+  .ar-landing .ar-price__side .ar-btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 860px) {
+  .ar-landing .ar-plates__grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    aspect-ratio: auto;
+  }
+
+  .ar-landing .ar-plate {
+    height: auto;
+  }
+
+  .ar-landing .ar-plate__frame {
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  .ar-landing .ar-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ar-landing .ar-steps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ar-landing .ar-advantages {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ar-landing .ar-advantage {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 12px 24px;
+    align-items: baseline;
+  }
+
+  .ar-landing .ar-advantage__text {
+    margin-top: 0 !important;
+  }
+
+  .ar-landing .ar-bullets {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ar-landing .ar-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ar-landing .ar-table__hint {
+    display: block;
+  }
+
+  .ar-landing .ar-tiers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .ar-landing {
+    font-size: 16px;
+  }
+
+  .ar-landing .ar-topline {
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+  }
+
+  .ar-landing .ar-topline__right {
+    text-align: left;
+  }
+
+  .ar-landing .ar-topline__sep {
+    width: 18px;
+  }
+
+  .ar-landing .ar-hero__title {
+    max-width: 100%;
+    font-size: clamp(2.35rem, 11vw, 3.15rem);
+  }
+
+  .ar-landing .ar-hero__actions .ar-btn {
+    width: 100%;
+  }
+
+  .ar-landing .ar-metarow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .ar-landing .ar-metarow__item {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block: 9px;
+    border-bottom: 1px solid var(--ar-rule-soft);
+  }
+
+  .ar-landing .ar-metarow__item + .ar-metarow__item {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .ar-landing .ar-metarow__item:last-child {
+    border-bottom: 0;
+  }
+
+  .ar-landing .ar-metarow__value {
+    text-align: right;
+  }
+
+  .ar-landing .ar-plates__caption {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ar-landing .ar-plates__caption span:last-child {
+    text-align: left;
+  }
+
+  .ar-landing .ar-plate__frame {
+    aspect-ratio: 4 / 3;
+  }
+
+  .ar-landing .ar-facts {
+    padding-block: 32px;
+  }
+
+  .ar-landing .ar-facts__list {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .ar-landing .ar-fact {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding-block: 12px;
+  }
+
+  .ar-landing .ar-fact + .ar-fact {
+    padding-left: 0;
+    border-left: 0;
+    border-top: 1px solid var(--ar-band-line);
+  }
+
+  .ar-landing .ar-fact__num {
+    font-size: 2rem;
+    white-space: nowrap;
+  }
+
+  .ar-landing .ar-fact__label {
+    text-align: right;
+  }
+
+  .ar-landing .ar-block__head {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .ar-landing .ar-block__num {
+    padding-top: 0;
+  }
+
+  .ar-landing .ar-block__title {
+    max-width: 20ch;
+  }
+
+  .ar-landing .ar-card {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 0 10px;
+  }
+
+  .ar-landing .ar-step {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .ar-landing .ar-advantage {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .ar-landing .ar-price {
+    padding: 22px 18px;
+  }
+
+  .ar-landing .ar-price__bottom .ar-btn {
+    width: 100%;
+  }
+
+  .ar-landing .ar-faq__btn {
+    gap: 16px;
+  }
+
+  .ar-landing .ar-faq__inner p {
+    padding-right: 24px;
+  }
+
+  .ar-landing .ar-final__actions .ar-btn {
+    width: 100%;
+  }
+
+  .ar-landing .ar-table th,
+  .ar-landing .ar-table td {
+    padding-right: 14px;
+  }
+}
+
+@media (max-width: 400px) {
+  .ar-landing .ar-fact__num {
+    font-size: 1.75rem;
+  }
+
+  .ar-landing .ar-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ar-landing .ar-card__num {
+    margin-bottom: 4px;
+  }
+
+  .ar-landing .ar-step {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ar-landing .ar-step__num {
+    margin-bottom: 2px;
+  }
+}
+
+/* ── Завершение анимаций ─────────────────────────────────────── */
+
+.ar-landing .ar-faq__panel,
+.ar-landing .ar-faq__icon::before,
+.ar-landing .ar-faq__icon::after {
+  transition-duration: 0.36s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ar-landing *,
+  .ar-landing *::before,
+  .ar-landing *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .ar-landing.ar-js [data-ar-reveal] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ИНДИВИДУАЛЬНЫЕ АКЦЕНТЫ СТРАНИЦ
+   Страницы различаются цветом кнопок, полосы цифр, подложки
+   чередующихся блоков, бонус-блока и волосяных акцентов.
+   Все связки проходят WCAG AA (кнопки ≥ 4.5:1 к тексту).
+   service-1 — дефолтная схема, переопределений не требует.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 2 — терракотовые кнопки, песочная полоса цифр, тёплые линии */
+.ar-landing[data-ar-page="service-2"] {
+  --ar-accent: var(--ar-terracotta);
+  --ar-btn-bg: var(--ar-terracotta);
+  --ar-btn-fg: var(--ar-on-dark);
+  --ar-btn-hover: var(--ar-ink);
+  --ar-btn-hover-fg: var(--ar-on-dark);
+  --ar-band-bg: var(--ar-sand);
+  --ar-band-fg: var(--ar-ink);
+  --ar-band-label: var(--ar-olive);
+  --ar-band-line: #c9b48f;
+  --ar-block-alt: var(--ar-sage-soft);
+  --ar-bonus-bg: var(--ar-cream);
+  --ar-bonus-label-bg: var(--ar-terracotta);
+  --ar-badge-bg: var(--ar-terracotta);
+}
+
+/* 3 — глиняные кнопки, светлая шалфейная полоса, мягкий бонус */
+.ar-landing[data-ar-page="service-3"] {
+  --ar-accent: var(--ar-golden);
+  --ar-btn-bg: var(--ar-clay);
+  --ar-btn-fg: var(--ar-ink);
+  --ar-btn-hover: var(--ar-terracotta);
+  --ar-btn-hover-fg: var(--ar-on-dark);
+  --ar-band-bg: var(--ar-sage);
+  --ar-band-fg: var(--ar-ink);
+  --ar-band-label: var(--ar-olive);
+  --ar-band-line: #d0dac3;
+  --ar-block-alt: var(--ar-sage);
+  --ar-bonus-bg: var(--ar-sage-soft);
+  --ar-bonus-label-bg: var(--ar-clay);
+  --ar-bonus-label-fg: var(--ar-ink);
+  --ar-badge-bg: var(--ar-clay);
+  --ar-badge-fg: var(--ar-ink);
+}
+
+/* 4 — оливковые кнопки, глубокая шалфейная подложка блоков */
+.ar-landing[data-ar-page="service-4"] {
+  --ar-accent: var(--ar-ochre);
+  --ar-btn-bg: var(--ar-olive);
+  --ar-btn-fg: var(--ar-on-dark);
+  --ar-btn-hover: var(--ar-ink);
+  --ar-btn-hover-fg: var(--ar-on-dark);
+  --ar-band-bg: var(--ar-sage-deep);
+  --ar-band-fg: var(--ar-ink);
+  --ar-band-label: var(--ar-olive);
+  --ar-band-line: #c6d2b4;
+  --ar-block-alt: var(--ar-sage-deep);
+  --ar-bonus-bg: var(--ar-cream);
+  --ar-badge-bg: var(--ar-ink);
+}
+
+/* 5 — тёмно-зелёные кнопки и тёмная полоса цифр (самая контрастная) */
+.ar-landing[data-ar-page="service-5"] {
+  --ar-accent: var(--ar-golden);
+  --ar-btn-bg: var(--ar-deep-green);
+  --ar-btn-fg: var(--ar-on-dark);
+  --ar-btn-hover: var(--ar-terracotta);
+  --ar-btn-hover-fg: var(--ar-on-dark);
+  --ar-band-bg: var(--ar-deep-green);
+  --ar-band-fg: var(--ar-on-dark);
+  --ar-band-label: var(--ar-sage-on-dark);
+  --ar-band-line: rgba(251, 246, 233, 0.28);
+  --ar-block-alt: var(--ar-sage-soft);
+  --ar-bonus-bg: var(--ar-cream);
+  --ar-bonus-label-bg: var(--ar-deep-green);
+  --ar-badge-bg: var(--ar-deep-green);
+}
+
+/* 6 — золотые кнопки, песочная полоса цифр */
+.ar-landing[data-ar-page="service-6"] {
+  --ar-accent: var(--ar-terracotta);
+  --ar-btn-bg: var(--ar-golden);
+  --ar-btn-fg: var(--ar-on-dark);
+  --ar-btn-hover: var(--ar-ink);
+  --ar-btn-hover-fg: var(--ar-on-dark);
+  --ar-band-bg: var(--ar-sand);
+  --ar-band-fg: var(--ar-ink);
+  --ar-band-label: var(--ar-olive);
+  --ar-band-line: #c9b48f;
+  --ar-block-alt: var(--ar-sage);
+  --ar-bonus-bg: var(--ar-sage-soft);
+  --ar-bonus-label-bg: var(--ar-golden);
+  --ar-badge-bg: var(--ar-golden);
+}
+
+/* 7 — песочные кнопки с чернильным текстом, светлая полоса цифр */
+.ar-landing[data-ar-page="service-7"] {
+  --ar-accent: var(--ar-golden);
+  --ar-btn-bg: var(--ar-sand);
+  --ar-btn-fg: var(--ar-ink);
+  --ar-btn-hover: var(--ar-clay);
+  --ar-btn-hover-fg: var(--ar-ink);
+  --ar-band-bg: var(--ar-sage-soft);
+  --ar-band-fg: var(--ar-ink);
+  --ar-band-label: var(--ar-olive);
+  --ar-band-line: #dde5d1;
+  --ar-block-alt: var(--ar-sage-deep);
+  --ar-bonus-bg: var(--ar-cream);
+  --ar-bonus-label-bg: var(--ar-sand);
+  --ar-bonus-label-fg: var(--ar-ink);
+  --ar-badge-bg: var(--ar-sand);
+  --ar-badge-fg: var(--ar-ink);
+}
+
+/* 8 — кнопки цвета оливы-дип, терракотовый ховер, шалфейная полоса */
+.ar-landing[data-ar-page="service-8"] {
+  --ar-accent: var(--ar-terracotta);
+  --ar-btn-bg: var(--ar-olive-deep);
+  --ar-btn-fg: var(--ar-on-dark);
+  --ar-btn-hover: var(--ar-terracotta);
+  --ar-btn-hover-fg: var(--ar-on-dark);
+  --ar-band-bg: var(--ar-sage);
+  --ar-band-fg: var(--ar-ink);
+  --ar-band-label: var(--ar-olive);
+  --ar-band-line: #d0dac3;
+  --ar-block-alt: var(--ar-sage-soft);
+  --ar-bonus-bg: var(--ar-cream);
+  --ar-bonus-label-bg: var(--ar-olive-deep);
+  --ar-badge-bg: var(--ar-olive-deep);
+}
+
+</style>
+</head>
+<body>
+<p class="ar-preview-note">Превью · service-7 · не для вставки в Tilda</p>
+<script>window.AR_POPUP = "zayavka";</script>
+<div class="ar-landing" data-ar-page="service-7">
+<script>document.currentScript.closest(".ar-landing").classList.add("ar-js");</script>
+    <section class="ar-hero">
+      <div class="ar-shell">
+        <div class="ar-topline">
+          <span class="ar-topline__item">
+            <span class="ar-topline__num">07 / 08</span>
+            <span class="ar-topline__sep" aria-hidden="true"></span>
+            <span>Система мотивации</span>
+          </span>
+          <span class="ar-topline__item ar-topline__right">Для собственников и HR-директоров</span>
+        </div>
+        <h1 class="ar-hero__title"><span>Система мотивации,</span> <span class="ar-hero__title-i">которая двигает бизнес</span></h1>
+        <div class="ar-hero__body">
+          <p class="ar-hero__lead">Разработаем и внедрим прозрачную систему оплаты труда и премирования, привязанную к целям компании и мотивирующую сотрудников на результат.</p>
+          <div class="ar-hero__actions">
+            <a class="ar-btn" href="#popup:zayavka" data-ar-cta>Получить консультацию<span class="ar-btn__arrow" aria-hidden="true">&#8594;</span></a>
+            <a class="ar-link" href="#ar-price" data-ar-scroll>Стоимость и форматы <span aria-hidden="true">&#8595;</span></a>
+          </div>
+          <p class="ar-hero__deck">Не «типовое положение», а живой инструмент управления, который учитывает специфику вашего бизнеса, стратегию, стиль руководства и корпоративную культуру.</p>
+          <dl class="ar-metarow"><div class="ar-metarow__item"><dt class="ar-metarow__label">Длительность</dt><dd class="ar-metarow__value">от 6 месяцев</dd></div><div class="ar-metarow__item"><dt class="ar-metarow__label">Формат</dt><dd class="ar-metarow__value">проект и внедрение</dd></div><div class="ar-metarow__item"><dt class="ar-metarow__label">Стоимость</dt><dd class="ar-metarow__value">от 500 000 ₽</dd></div></dl>
+        </div>
+      </div>
+    </section>
+
+    <section class="ar-plates" aria-label="Иллюстрации">
+      <div class="ar-shell">
+        <div class="ar-plates__grid ar-plates__grid--single">
+          <div class="ar-plate ar-plate--main"><div class="ar-plate__frame"><img class="ar-plate__img" src="../assets/img/service-7-band.jpg" alt="" width="1920" height="1080" loading="lazy" decoding="async" data-ar-img="band"></div></div>
+          
+        </div>
+        <p class="ar-plates__caption"><span>07 / Система мотивации</span></p>
+      </div>
+    </section>
+
+    <section class="ar-facts" aria-label="Ключевые параметры">
+      <div class="ar-shell">
+        <ul class="ar-facts__list"><li class="ar-fact"><span class="ar-fact__num">8</span><span class="ar-fact__label">этапов проекта</span></li><li class="ar-fact"><span class="ar-fact__num">2 месяца</span><span class="ar-fact__label">уведомление по ТК РФ</span></li><li class="ar-fact"><span class="ar-fact__num">от 500 000 ₽</span><span class="ar-fact__label">стоимость проекта</span></li></ul>
+      </div>
+    </section>
+
+    <section class="ar-block" aria-labelledby="ar-h-07-1">
+      <div class="ar-shell">
+        <div class="ar-block__head" data-ar-reveal>
+          <span class="ar-block__num" aria-hidden="true">01</span>
+          <h2 class="ar-block__title" id="ar-h-07-1">Знакомая картина?</h2>
+        </div>
+<div class="ar-prose" data-ar-reveal>
+<p>Сотрудники получают зарплату, но не стремятся к результату. Премии выплачиваются, но не влияют на эффективность. Кто-то перегружен, кто-то «просиживает» часы, а оклады несправедливо разнятся.</p>
+<p>Причина — система мотивации либо отсутствует, либо работает вхолостую.</p>
+<p>Мы создаём систему, при которой выгодно работать хорошо. И это не про «больше платить», а про «платить правильно».</p>
+</div>
+      </div>
+    </section>
+    <section class="ar-block ar-block--warm" aria-labelledby="ar-h-07-2">
+      <div class="ar-shell">
+        <div class="ar-block__head" data-ar-reveal>
+          <span class="ar-block__num" aria-hidden="true">02</span>
+          <h2 class="ar-block__title" id="ar-h-07-2">Как мы работаем</h2>
+        </div>
+<ol class="ar-steps" data-ar-reveal>
+<li class="ar-step"><span class="ar-step__num" aria-hidden="true">01</span><div><h3 class="ar-step__title">Диагностика</h3><p class="ar-step__text">Погружаемся в ситуацию: анализируем текущую систему оплаты, оргструктуру, цели компании и реальные проблемы.</p></div></li>
+<li class="ar-step"><span class="ar-step__num" aria-hidden="true">02</span><div><h3 class="ar-step__title">Наводим порядок в структуре</h3><p class="ar-step__text">Актуализируем организационно-функциональную структуру. Определяем главные задачи и цели на текущий и предстоящий год для каждого подразделения — в строгом соответствии со стратегией компании.</p></div></li>
+<li class="ar-step"><span class="ar-step__num" aria-hidden="true">03</span><div><h3 class="ar-step__title">Подбираем модель мотивации</h3><p class="ar-step__text">Выбираем оптимальную систему оплаты труда и премирования для разных категорий персонала. Модель должна одновременно обеспечивать достижение целей бизнеса и реально мотивировать людей.</p></div></li>
+<li class="ar-step"><span class="ar-step__num" aria-hidden="true">04</span><div><h3 class="ar-step__title">Презентация модели</h3><p class="ar-step__text">Показываем и обсуждаем предложенную систему с ключевыми лицами компании.</p></div></li>
+<li class="ar-step"><span class="ar-step__num" aria-hidden="true">05</span><div><h3 class="ar-step__title">Оценка должностей и выравнивание</h3><p class="ar-step__text">Проводим оценку позиций, разрабатываем разрядно-тарифные сетки, устраняем перекосы в окладах, корректируем штатное расписание.</p></div></li>
+<li class="ar-step"><span class="ar-step__num" aria-hidden="true">06</span><div><h3 class="ar-step__title">Расчётное моделирование</h3><p class="ar-step__text">Просчитываем систему при разных сценариях: выполнение, невыполнение, перевыполнение плана. Корректируем бюджет оплаты труда.</p></div></li>
+<li class="ar-step"><span class="ar-step__num" aria-hidden="true">07</span><div><h3 class="ar-step__title">Разработка документов</h3><p class="ar-step__text">Готовим полный комплект документации по системе оплаты труда и премированию в соответствии с ТК РФ.</p></div></li>
+<li class="ar-step"><span class="ar-step__num" aria-hidden="true">08</span><div><h3 class="ar-step__title">Внедрение с сопровождением</h3><p class="ar-step__text">Уведомляем сотрудников за 2 месяца, обучаем руководителей и ответственных за сопровождение системы, контролируем тестовые расчёты и собираем обратную связь.</p></div></li>
+</ol>
+<p class="ar-block__note" data-ar-reveal>Продолжительность: от 6 месяцев — это полноценное внедрение, а не разовая консультация.</p>
+      </div>
+    </section>
+    <section class="ar-block" aria-labelledby="ar-h-07-3">
+      <div class="ar-shell">
+        <div class="ar-block__head" data-ar-reveal>
+          <span class="ar-block__num" aria-hidden="true">03</span>
+          <h2 class="ar-block__title" id="ar-h-07-3">Результат</h2>
+        </div>
+<figure class="ar-quote" data-ar-reveal><blockquote><p>Система, при которой выгодно работать хорошо.</p></blockquote></figure>
+<p class="ar-result__text" data-ar-reveal>Что это значит на практике:</p>
+<div class="ar-bullets" data-ar-reveal>
+<div class="ar-bullet"><span class="ar-bullet__mark" aria-hidden="true">&#8594;</span><div><p class="ar-bullet__text">Сотрудники понимают, за что получают деньги и как могут влиять на свой доход.</p></div></div>
+<div class="ar-bullet"><span class="ar-bullet__mark" aria-hidden="true">&#8594;</span><div><p class="ar-bullet__text">Премиальный фонд работает на результат, а не «раздаётся».</p></div></div>
+<div class="ar-bullet"><span class="ar-bullet__mark" aria-hidden="true">&#8594;</span><div><p class="ar-bullet__text">Нет перекосов и несправедливости в окладах.</p></div></div>
+<div class="ar-bullet"><span class="ar-bullet__mark" aria-hidden="true">&#8594;</span><div><p class="ar-bullet__text">Руководители получают инструмент управления эффективностью.</p></div></div>
+<div class="ar-bullet"><span class="ar-bullet__mark" aria-hidden="true">&#8594;</span><div><p class="ar-bullet__text">Бизнес экономит на неэффективных выплатах и повышает производительность.</p></div></div>
+</div>
+      </div>
+    </section>
+    <section class="ar-block" id="ar-price" aria-labelledby="ar-price">
+      <div class="ar-shell">
+        <div class="ar-block__head" data-ar-reveal>
+          <span class="ar-block__num" aria-hidden="true">04</span>
+          <h2 class="ar-block__title" id="ar-price">Стоимость</h2>
+        </div>
+<div class="ar-price" data-ar-reveal>
+          <div class="ar-price__grid">
+            <div>
+              <p class="ar-price__label">Стоимость</p>
+              <p class="ar-price__amount">от 500 000 ₽</p>
+              <p class="ar-price__note">Стоимость зависит от численности персонала и сложности структуры.</p>
+            </div>
+            <div class="ar-price__side"><p class="ar-price__label">Что входит</p><ul class="ar-price__includes"><li>Диагностика системы оплаты и структуры</li><li>Модель мотивации под цели бизнеса</li><li>Оценка должностей и тарифные сетки</li><li>Документы в соответствии с ТК РФ</li><li>Внедрение и сопровождение</li></ul><a class="ar-btn" href="#popup:zayavka" data-ar-cta>Получить консультацию<span class="ar-btn__arrow" aria-hidden="true">&#8594;</span></a><p class="ar-price__hint">Точную стоимость и сроки фиксируем в договоре.</p></div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="ar-block" aria-labelledby="ar-h-07-5">
+      <div class="ar-shell">
+        <div class="ar-block__head" data-ar-reveal>
+          <span class="ar-block__num" aria-hidden="true">05</span>
+          <h2 class="ar-block__title" id="ar-h-07-5">Вопросы</h2>
+        </div>
+<div class="ar-faq" data-ar-reveal>
+<div class="ar-faq__item"><h3 class="ar-faq__q-wrap"><button class="ar-faq__btn" type="button" id="ar-faq-07-1-btn" aria-expanded="false" aria-controls="ar-faq-07-1"><span class="ar-faq__q">Обязательно ли внедрять 6 месяцев?</span><span class="ar-faq__icon" aria-hidden="true"></span></button></h3><div class="ar-faq__panel" id="ar-faq-07-1" role="region" aria-labelledby="ar-faq-07-1-btn"><div class="ar-faq__inner"><p>Закон требует уведомить сотрудников об изменении оплаты за 2 месяца. Плюс диагностика, проектирование и сопровождение — поэтому проект занимает от полугода.</p></div></div></div>
+<div class="ar-faq__item"><h3 class="ar-faq__q-wrap"><button class="ar-faq__btn" type="button" id="ar-faq-07-2-btn" aria-expanded="false" aria-controls="ar-faq-07-2"><span class="ar-faq__q">Можно ли обойтись без изменения окладов?</span><span class="ar-faq__icon" aria-hidden="true"></span></button></h3><div class="ar-faq__panel" id="ar-faq-07-2" role="region" aria-labelledby="ar-faq-07-2-btn"><div class="ar-faq__inner"><p>Да, если перекосов нет. Иногда достаточно переработать премиальную часть и показатели.</p></div></div></div>
+<div class="ar-faq__item"><h3 class="ar-faq__q-wrap"><button class="ar-faq__btn" type="button" id="ar-faq-07-3-btn" aria-expanded="false" aria-controls="ar-faq-07-3"><span class="ar-faq__q">Что с законом?</span><span class="ar-faq__icon" aria-hidden="true"></span></button></h3><div class="ar-faq__panel" id="ar-faq-07-3" role="region" aria-labelledby="ar-faq-07-3-btn"><div class="ar-faq__inner"><p>Готовим полный комплект документов в соответствии с ТК РФ и сопровождаем внедрение.</p></div></div></div>
+<div class="ar-faq__item"><h3 class="ar-faq__q-wrap"><button class="ar-faq__btn" type="button" id="ar-faq-07-4-btn" aria-expanded="false" aria-controls="ar-faq-07-4"><span class="ar-faq__q">Как вы измеряете результат?</span><span class="ar-faq__icon" aria-hidden="true"></span></button></h3><div class="ar-faq__panel" id="ar-faq-07-4" role="region" aria-labelledby="ar-faq-07-4-btn"><div class="ar-faq__inner"><p>Через показатели, которые заложены в модель: выполнение целей, производительность, динамику премиального фонда.</p></div></div></div>
+</div>
+      </div>
+    </section>
+
+    <section class="ar-final" id="ar-final" data-ar-final aria-labelledby="ar-final-title">
+      <div class="ar-shell ar-final__grid">
+        <div class="ar-final__body">
+          <p class="ar-section-label">Следующий шаг</p>
+          <h2 class="ar-final__title" id="ar-final-title"><span>Готовы сделать так,</span> <span class="ar-final__title-i">чтобы зарплата работала на результат?</span></h2>
+          <p class="ar-final__text">Обсудим вашу ситуацию и предложим план внедрения.</p>
+          <div class="ar-final__actions">
+            <a class="ar-btn ar-btn--light" href="#popup:zayavka" data-ar-cta>Получить консультацию<span class="ar-btn__arrow" aria-hidden="true">&#8594;</span></a>
+            <a class="ar-link" href="#ar-price" data-ar-scroll style="color:#dcc9ac;border-color:rgba(220,201,172,.45)">Стоимость ещё раз <span aria-hidden="true">&#8593;</span></a>
+          </div>
+          <p class="ar-final__note">Отвечаем в течение рабочего дня</p>
+        </div>
+        <figure class="ar-final__figure" data-ar-reveal>
+          <div class="ar-final__frame">
+            <img class="ar-final__img" src="../assets/img/service-7-final.jpg" alt="" width="1000" height="1250" loading="lazy" decoding="async" data-ar-img="final">
+          </div>
+        </figure>
+      </div>
+    </section>
+</div>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   AR LANDING — поведение страницы
+   Настройки лежат в window.AR_POPUP / window.AR_IMG (см. шапку сниппета).
+   Без библиотек. Если JS не загрузился — контент остаётся видимым.
+   ═══════════════════════════════════════════════════════════════ */
+
+(function () {
+  "use strict";
+
+  var root = document.querySelector(".ar-landing");
+  if (!root) return;
+
+  var POPUP_ID = (window.AR_POPUP || "zayavka").replace(/^#?popup:?/, "");
+  var IMAGES = window.AR_IMG || {};
+
+  /* ── 1. Кнопки и попап Tilda ──────────────────────────────── */
+
+  var ctas = root.querySelectorAll("[data-ar-cta]");
+
+  function popupExists(id) {
+    return !!document.querySelector('[id="popup:' + id + '"]');
+  }
+
+  // Свой плавный скролл: scrollIntoView({behavior:"smooth"}) не везде работает,
+  // а window.scrollTo — стабильно. Отступ учитывает закреплённую шапку Tilda.
+  function scrollToElement(target) {
+    if (!target) return;
+    var header = document.querySelector(".t-header, #t-header, .t199__header");
+    var headerOffset = header ? Math.min(header.getBoundingClientRect().height, 140) : 84;
+    var top = target.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+    if (top < 0) top = 0;
+    if ("scrollBehavior" in document.documentElement.style) {
+      window.scrollTo({ top: top, behavior: "smooth" });
+    } else {
+      window.scrollTo(0, top);
+    }
+  }
+
+  function scrollToFinal(event) {
+    var target = root.querySelector("[data-ar-final]");
+    if (!target) return;
+    event.preventDefault();
+    scrollToElement(target);
+    var firstControl = target.querySelector("a, button");
+    if (firstControl) firstControl.focus({ preventScroll: true });
+  }
+
+  Array.prototype.forEach.call(ctas, function (cta) {
+    cta.setAttribute("href", "#popup:" + POPUP_ID);
+    cta.addEventListener("click", function (event) {
+      if (!popupExists(POPUP_ID)) scrollToFinal(event);
+    });
+  });
+
+  /* ── 2. Картинки из настроек ──────────────────────────────── */
+
+  Array.prototype.forEach.call(root.querySelectorAll("[data-ar-img]"), function (img) {
+    var key = img.getAttribute("data-ar-img");
+    var url = IMAGES[key];
+    if (!url) return;
+    img.setAttribute("src", url);
+    img.removeAttribute("srcset");
+    img.removeAttribute("sizes");
+    var frame = img.closest(".ar-plate__frame, .ar-final__frame");
+    if (frame) frame.removeAttribute("data-ar-empty");
+  });
+
+  /* ── 3. Плавный скролл по внутренним ссылкам ──────────────── */
+
+  Array.prototype.forEach.call(root.querySelectorAll("[data-ar-scroll]"), function (link) {
+    link.addEventListener("click", function (event) {
+      var hash = link.getAttribute("href") || "";
+      var target = hash.charAt(0) === "#" ? root.querySelector(hash) : null;
+      if (!target) return;
+      event.preventDefault();
+      scrollToElement(target);
+
+      if (history.replaceState) {
+        history.replaceState(null, "", hash);
+      }
+    });
+  });
+
+  /* ── 4. FAQ-аккордеон ─────────────────────────────────────── */
+
+  Array.prototype.forEach.call(root.querySelectorAll(".ar-faq__btn"), function (btn) {
+    btn.addEventListener("click", function () {
+      var item = btn.closest(".ar-faq__item");
+      if (!item) return;
+      var isOpen = item.classList.toggle("is-open");
+      btn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+    });
+  });
+
+  /* ── 5. Мягкое появление блоков ───────────────────────────── */
+
+  var revealItems = root.querySelectorAll("[data-ar-reveal]");
+
+  function showAll() {
+    Array.prototype.forEach.call(revealItems, function (item) {
+      item.classList.add("is-in");
+    });
+  }
+
+  var reduced =
+    window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (!("IntersectionObserver" in window) || reduced) {
+    showAll();
+  } else {
+    var observer = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-in");
+          observer.unobserve(entry.target);
+        });
+      },
+      { rootMargin: "0px 0px -6% 0px", threshold: 0.06 }
+    );
+
+    Array.prototype.forEach.call(revealItems, function (item) {
+      observer.observe(item);
+    });
+  }
+
+  /* ── 6. Метка «страница готова» ───────────────────────────── */
+
+  root.setAttribute("data-ar-ready", "true");
+})();
+
+</script>
+</body>
+</html>

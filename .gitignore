@@ -6,11 +6,15 @@ dist/
 build/
 *.tmp
 *.log
+__pycache__/
 
 # Локальные настройки редакторов
 .vscode/
 .idea/
 *.swp
+
+# Скриншоты инструментов тестирования
+.playwright-mcp/
 
 # OS
 Thumbs.db
