@@ -151,6 +151,38 @@
         </label>
       </div>
 
+      <div class="field" id="repeatScopeWrap" hidden>
+        <span class="field__label">Повторяющаяся задача</span>
+        <select name="repeatScope">
+          <option value="one">Изменить только эту задачу</option>
+          <option value="series">Изменить всю серию</option>
+        </select>
+        <span class="field__hint" id="repeatSummary"></span>
+      </div>
+
+      <div class="field-row" id="repeatRow">
+        <label class="field">
+          <span class="field__label">Повтор</span>
+          <select name="repeatFreq">
+            <option value="">Не повторять</option>
+            <option value="daily">Ежедневно</option>
+            <option value="weekdays">По будням</option>
+            <option value="weekly">Еженедельно</option>
+            <option value="monthly">Ежемесячно</option>
+            <option value="yearly">Ежегодно</option>
+          </select>
+        </label>
+        <label class="field" id="repeatIntervalWrap" hidden>
+          <span class="field__label" id="repeatIntervalLabel">Каждые</span>
+          <input type="number" name="repeatInterval" min="1" max="99" step="1" value="1">
+        </label>
+        <label class="field" id="repeatUntilWrap" hidden>
+          <span class="field__label">До (необязательно)</span>
+          <input type="date" name="repeatUntil">
+        </label>
+      </div>
+      <p class="field__hint" id="repeatHint" hidden></p>
+
       <div class="field-row">
         <label class="field">
           <span class="field__label">Ответственный</span>
@@ -174,6 +206,7 @@
 
     <footer class="modal__foot">
       <button type="button" class="btn btn--danger" id="deleteTaskBtn">Удалить</button>
+      <button type="button" class="btn btn--danger" id="deleteSeriesBtn" hidden>Удалить серию</button>
       <span class="spacer"></span>
       <button type="button" class="btn" id="cancelTaskBtn" data-close>Отмена</button>
       <button type="submit" class="btn btn--primary" id="saveTaskBtn">Сохранить</button>

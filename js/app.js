@@ -249,7 +249,13 @@
 
     dom.taskFormSubmit = document.getElementById('taskForm');
     dom.taskFormSubmit.addEventListener('submit', CAL.modal.submitTask);
+    dom.taskFormSubmit.addEventListener('change', (event) => {
+      if (event.target.name === 'repeatFreq' || event.target.name === 'repeatScope') {
+        CAL.modal.refreshRepeatFields();
+      }
+    });
     document.getElementById('deleteTaskBtn').addEventListener('click', CAL.modal.deleteCurrentTask);
+    document.getElementById('deleteSeriesBtn').addEventListener('click', CAL.modal.deleteCurrentSeries);
 
     document.getElementById('personForm').addEventListener('submit', CAL.modal.addPerson);
     document.getElementById('confirmOk').addEventListener('click', CAL.modal.acceptConfirm);

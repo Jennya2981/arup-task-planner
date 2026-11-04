@@ -19,8 +19,15 @@
     dom.taskModalTitle = document.getElementById('taskModalTitle');
     dom.taskReadonlyHint = document.getElementById('taskReadonlyHint');
     dom.deleteTaskBtn = document.getElementById('deleteTaskBtn');
+    dom.deleteSeriesBtn = document.getElementById('deleteSeriesBtn');
     dom.saveTaskBtn = document.getElementById('saveTaskBtn');
     dom.cancelTaskBtn = document.getElementById('cancelTaskBtn');
+    dom.repeatScopeWrap = document.getElementById('repeatScopeWrap');
+    dom.repeatSummary = document.getElementById('repeatSummary');
+    dom.repeatIntervalWrap = document.getElementById('repeatIntervalWrap');
+    dom.repeatIntervalLabel = document.getElementById('repeatIntervalLabel');
+    dom.repeatUntilWrap = document.getElementById('repeatUntilWrap');
+    dom.repeatHint = document.getElementById('repeatHint');
     dom.peopleModal = document.getElementById('peopleModal');
     dom.peopleForm = document.getElementById('personForm');
     dom.peopleList = document.getElementById('peopleList');
@@ -106,6 +113,63 @@
     dom.deleteTaskBtn.hidden = !(admin && editingTaskId);
     dom.cancelTaskBtn.textContent = admin ? 'Отмена' : 'Закрыть';
     dom.taskReadonlyHint.hidden = admin;
+
+    const task = editingTask();
+    dom.deleteSeriesBtn.hidden = !(admin && task && task.seriesId);
+    refreshRepeatFields();
+  }
+
+  function editingTask() {
+    if (!editingTaskId) return null;
+    return state.tasks.find((t) => t.id === editingTaskId) || null;
+  }
+
+  /** Читает правило повтора из формы; null — не повторять. */
+  function readRepeat() {
+    const form = dom.taskForm;
+    const freq = form.elements.repeatFreq.value;
+    if (!freq) return null;
+    return {
+      freq: freq,
+      interval: Number(form.elements.repeatInterval.value) || 1,
+      until: form.elements.repeatUntil.value || ''
+    };
+  }
+
+  const REPEAT_UNITS = {
+    daily: 'дн.', weekdays: 'дн.', weekly: 'нед.', monthly: 'мес.', yearly: 'г.'
+  };
+
+  /** Показывает интервал/дату окончания и блокирует повтор для «только этой задачи». */
+  function refreshRepeatFields() {
+    if (!dom.taskForm || !dom.taskForm.elements.repeatFreq) return;
+    const form = dom.taskForm;
+    const admin = store.isAdmin();
+    const task = editingTask();
+    const isSeries = !!(task && task.seriesId);
+    const freq = form.elements.repeatFreq.value;
+    const hasRepeat = !!freq;
+    const scope = form.elements.repeatScope.value;
+
+    dom.repeatIntervalWrap.hidden = !hasRepeat || freq === 'weekdays';
+    dom.repeatUntilWrap.hidden = !hasRepeat;
+    dom.repeatHint.hidden = !hasRepeat;
+    if (hasRepeat) {
+      dom.repeatHint.textContent = 'Без даты «До» повторения создаются на год вперёд, но не более 200 задач.';
+      dom.repeatIntervalLabel.textContent = 'Каждые (' + (REPEAT_UNITS[freq] || '') + ')';
+    }
+
+    if (isSeries) {
+      const count = store.seriesMembers(task.seriesId).length;
+      dom.repeatSummary.textContent = task.repeat
+        ? 'Серия: ' + store.repeatLabel(task.repeat) + '. Задач в серии: ' + count + '.'
+        : 'Часть серии повторений.';
+    }
+
+    const lockRepeat = isSeries && scope === 'one';
+    [form.elements.repeatFreq, form.elements.repeatInterval, form.elements.repeatUntil].forEach((control) => {
+      control.disabled = !admin || lockRepeat;
+    });
   }
 
   function openTaskModal(taskId, dateKey, prefillStartTime) {
@@ -122,6 +186,13 @@
       '<option value="' + escapeHtml(person.id) + '">' + escapeHtml(person.name) + '</option>').join('');
     form.elements.assigneeId.innerHTML = '<option value="">— не назначен —</option>' + people;
 
+    form.elements.repeatFreq.value = '';
+    form.elements.repeatInterval.value = '1';
+    form.elements.repeatUntil.value = '';
+    form.elements.repeatScope.value = 'one';
+    dom.repeatScopeWrap.hidden = true;
+    dom.repeatSummary.textContent = '';
+
     if (taskId) {
       const task = state.tasks.find((t) => t.id === taskId);
       if (!task) return;
@@ -134,6 +205,15 @@
       form.elements.priority.value = task.priority;
       form.elements.status.value = task.status;
       form.elements.notes.value = task.notes || '';
+
+      if (task.repeat) {
+        form.elements.repeatFreq.value = task.repeat.freq;
+        form.elements.repeatInterval.value = task.repeat.interval || 1;
+        form.elements.repeatUntil.value = task.repeat.until || '';
+      }
+      if (task.seriesId) {
+        dom.repeatScopeWrap.hidden = false;
+      }
     } else {
       dom.taskModalTitle.textContent = 'Новая задача';
       form.elements.date.value = dateKey || state.selectedDate || toKey(new Date());
@@ -180,9 +260,31 @@
       status: form.elements.status.value
     };
 
+    const repeat = readRepeat();
+    const scope = form.elements.repeatScope.value;
+
     if (editingTaskId) {
-      store.updateTask(editingTaskId, payload);
-      showToast('Задача обновлена');
+      const task = editingTask();
+      if (!task) return;
+
+      if (task.seriesId && scope === 'series') {
+        const result = store.updateSeries(task.seriesId, task.id, Object.assign({}, payload, { repeat: repeat }));
+        if (result && result.stopped) showToast('Повторение остановлено');
+        else showToast('Серия обновлена');
+      } else if (!task.seriesId && repeat) {
+        const created = store.startSeries(task.id, Object.assign({}, payload, { repeat: repeat }));
+        showToast(created.length > 1
+          ? 'Задача сохранена, создано ' + created.length + ' повторений'
+          : 'Задача обновлена');
+      } else {
+        store.updateTask(editingTaskId, payload);
+        showToast('Задача обновлена');
+      }
+    } else if (repeat) {
+      const created = store.addTaskSeries(Object.assign({}, payload, { repeat: repeat }));
+      showToast(created.length > 1
+        ? 'Создано ' + created.length + ' повторений'
+        : 'Задача создана');
     } else {
       state.selectedDate = date;
       store.addTask(payload);
@@ -197,9 +299,13 @@
     const task = state.tasks.find((t) => t.id === editingTaskId);
     if (!task) return;
 
+    const seriesNote = task.seriesId
+      ? ' Это одна из повторяющихся задач — остальные останутся.'
+      : '';
+
     confirmDialog(
       'Удалить задачу?',
-      'Задача «' + task.title + '» будет удалена безвозвратно.',
+      'Задача «' + task.title + '» будет удалена безвозвратно.' + seriesNote,
       () => {
         const index = state.tasks.findIndex((t) => t.id === editingTaskId);
         store.removeTask(editingTaskId);
@@ -212,6 +318,30 @@
           }
         });
       }
+    );
+  }
+
+  function deleteCurrentSeries() {
+    if (!store.isAdmin() || !editingTaskId) return;
+    const task = editingTask();
+    if (!task || !task.seriesId) return;
+    const members = store.seriesMembers(task.seriesId);
+
+    confirmDialog(
+      'Удалить всю серию?',
+      'Будет удалено ' + pluralTasks(members.length) + ', включая эту задачу.',
+      () => {
+        store.removeSeries(task.seriesId);
+        closeModal(dom.taskModal);
+        showToast('Серия удалена', {
+          actionLabel: 'Вернуть',
+          onAction: () => {
+            store.restoreTasks(members);
+            showToast('Серия восстановлена');
+          }
+        });
+      },
+      'Удалить серию'
     );
   }
 
@@ -793,6 +923,8 @@
     openTaskModal,
     submitTask,
     deleteCurrentTask,
+    deleteCurrentSeries,
+    refreshRepeatFields,
     openPeopleModal,
     setPendingColor,
     addPerson,

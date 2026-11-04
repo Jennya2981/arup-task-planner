@@ -466,15 +466,19 @@
       ? '<span class="task__who" style="background:' + escapeHtml(store.personColor(task.assigneeId)) + '" title="' +
         escapeHtml(store.personName(task.assigneeId)) + '">' + escapeHtml(initials(store.personName(task.assigneeId))) + '</span>'
       : '';
+    const repeat = task.seriesId && store.repeatLabel
+      ? '<span class="task__repeat" title="' + escapeHtml(store.repeatLabel(task.repeat)) + '">↻</span>'
+      : '';
 
     return `
       <button class="${classes.join(' ')}" data-task-id="${escapeHtml(task.id)}"
               style="border-left-color:${escapeHtml(priority.color)}"
-              title="${escapeHtml(task.title)} · ${escapeHtml(status.label)} · ${escapeHtml(priority.label)}${task.startTime ? ' · ' + escapeHtml(utils.fmtTime(task.startTime)) : ''}">
+              title="${escapeHtml(task.title)} · ${escapeHtml(status.label)} · ${escapeHtml(priority.label)}${task.startTime ? ' · ' + escapeHtml(utils.fmtTime(task.startTime)) : ''}${task.seriesId && store.repeatLabel ? ' · ' + escapeHtml(store.repeatLabel(task.repeat)) : ''}">
         ${time}
         <span class="task__title">${escapeHtml(task.title)}</span>
         ${flag}
         ${who}
+        ${repeat}
       </button>`;
   }
 
@@ -499,6 +503,9 @@
 
     const badges =
       (overdue ? '<span class="badge badge--overdue">просрочено</span>' : '') +
+      (task.seriesId && store.repeatLabel
+        ? '<span class="badge badge--repeat" title="' + escapeHtml(store.repeatLabel(task.repeat)) + '">↻ повтор</span>'
+        : '') +
       '<span class="badge" style="color:' + escapeHtml(priority.color) + '">' + escapeHtml(priority.label) + '</span>' +
       '<span class="badge" style="color:' + escapeHtml(status.color) + '">' + escapeHtml(status.label) + '</span>';
 

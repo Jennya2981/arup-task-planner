@@ -39,6 +39,12 @@ window.CAL = window.CAL || {};
     '#ec4899', '#8b5cf6', '#14b8a6', '#f97316', '#64748b'
   ];
 
+  /* Повторяющиеся задачи: храним не бесконечное правило, а конкретные задачи серии.
+     Без даты окончания создаём повторения на год вперёд, но не больше лимита. */
+  const REPEAT_MAX = 200;
+  const REPEAT_HORIZON_MONTHS = 12;
+  const REPEAT_FREQS = ['daily', 'weekdays', 'weekly', 'monthly', 'yearly'];
+
   const WEEKDAYS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
   const WEEKDAYS_FULL = ['понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота', 'воскресенье'];
   const MONTHS_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
@@ -153,6 +159,113 @@ window.CAL = window.CAL || {};
     return String(text == null ? '' : text)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  /* --------------------------- Повторяющиеся задачи --------------------- */
+
+  function normalizeRepeat(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const freq = String(raw.freq || '');
+    if (REPEAT_FREQS.indexOf(freq) === -1) return null;
+    let interval = Math.round(Number(raw.interval));
+    if (!isFinite(interval) || interval < 1) interval = 1;
+    if (interval > 99) interval = 99;
+    const until = /^\d{4}-\d{2}-\d{2}$/.test(String(raw.until || '')) ? String(raw.until) : '';
+    return { freq: freq, interval: interval, until: until };
+  }
+
+  function cloneRepeat(raw) {
+    const repeat = normalizeRepeat(raw);
+    return repeat ? { freq: repeat.freq, interval: repeat.interval, until: repeat.until } : null;
+  }
+
+  function pluralWord(n, forms) {
+    const n10 = n % 10;
+    const n100 = n % 100;
+    if (n10 === 1 && n100 !== 11) return forms[0];
+    if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return forms[1];
+    return forms[2];
+  }
+
+  /** Ближайший будний день (сдвиг вперёд). */
+  function nextWeekday(date) {
+    let d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    while (d.getDay() === 0 || d.getDay() === 6) d = addDays(d, 1);
+    return d;
+  }
+
+  /**
+   * Даты повторений серии. Первая дата — старт (кроме «по будням»,
+   * где выходной сдвигается на понедельник).
+   */
+  function buildRepeatDates(startKey, repeat) {
+    const r = normalizeRepeat(repeat);
+    if (!r) return [startKey];
+
+    const start = fromKey(startKey);
+    const until = r.until ? fromKey(r.until) : null;
+    const horizon = addMonths(start, REPEAT_HORIZON_MONTHS);
+    const limit = until && until < horizon ? until : horizon;
+    const dates = [];
+    let date = r.freq === 'weekdays' ? nextWeekday(start) : new Date(start);
+    let guard = 0;
+
+    while (dates.length < REPEAT_MAX && guard < REPEAT_MAX * 3 + 10) {
+      guard += 1;
+      if (date.getTime() > limit.getTime()) break;
+      if (date.getTime() < start.getTime()) { date = addDays(date, 1); continue; }
+
+      dates.push(toKey(date));
+      const step = dates.length;
+
+      if (r.freq === 'weekdays') {
+        date = nextWeekday(addDays(date, 1));
+      } else if (r.freq === 'daily') {
+        date = addDays(start, step * r.interval);
+      } else if (r.freq === 'weekly') {
+        date = addDays(start, step * r.interval * 7);
+      } else if (r.freq === 'monthly') {
+        date = addMonths(start, step * r.interval);
+      } else {
+        date = addMonths(start, step * r.interval * 12);
+      }
+    }
+
+    if (!dates.length) {
+      dates.push(toKey(r.freq === 'weekdays' ? nextWeekday(start) : start));
+    }
+    return dates;
+  }
+
+  function repeatLabel(repeat) {
+    const r = normalizeRepeat(repeat);
+    if (!r) return '';
+    let text;
+    if (r.freq === 'weekdays') {
+      text = 'По будням';
+    } else {
+      const single = {
+        daily: 'Ежедневно', weekly: 'Еженедельно',
+        monthly: 'Ежемесячно', yearly: 'Ежегодно'
+      }[r.freq];
+      const units = {
+        daily: ['день', 'дня', 'дней'],
+        weekly: ['неделю', 'недели', 'недель'],
+        monthly: ['месяц', 'месяца', 'месяцев'],
+        yearly: ['год', 'года', 'лет']
+      }[r.freq];
+      text = r.interval === 1
+        ? single
+        : 'Каждые ' + r.interval + ' ' + pluralWord(r.interval, units);
+    }
+    if (r.until) text += ', до ' + fmtDayShort(fromKey(r.until));
+    return text;
+  }
+
+  /** Все задачи одной серии повторений. */
+  function seriesMembers(seriesId) {
+    if (!seriesId) return [];
+    return state.tasks.filter((task) => task.seriesId === seriesId);
   }
 
   /* --------------------------- Состояние ------------------------------- */
@@ -400,7 +513,7 @@ window.CAL = window.CAL || {};
         // Назначение: задачу только что передали мне.
         if (task.assigneeId === me && (!before || before.assigneeId !== me)) {
           addNotification({
-            id: 'assign:' + task.id + ':' + (task.updatedAt || task.date),
+            id: 'assign:' + (task.seriesId || task.id) + ':' + (task.updatedAt || task.date),
             kind: 'assign',
             taskId: task.id,
             title: 'Назначена задача',
@@ -820,6 +933,12 @@ window.CAL = window.CAL || {};
       assigneeId: raw.assigneeId || '',
       priority: raw.priority || 'normal',
       status: raw.status || 'todo',
+      seriesId: raw.seriesId || '',
+      repeat: raw.repeat ? {
+        freq: raw.repeat.freq || '',
+        interval: raw.repeat.interval || 1,
+        until: raw.repeat.until || ''
+      } : null,
       createdAt: raw.createdAt || new Date().toISOString(),
       updatedAt: raw.updatedAt || new Date().toISOString()
     };
@@ -915,6 +1034,139 @@ window.CAL = window.CAL || {};
 
   function restoreTask(task, index) {
     state.tasks.splice(index == null ? state.tasks.length : index, 0, task);
+    emit();
+  }
+
+  /* --------------------------- Серии повторений ------------------------- */
+
+  /** Задачи серии по правилу повтора. Первая получает id firstId (при конвертации). */
+  function buildSeriesTasks(data, repeat, options) {
+    const opts = options || {};
+    const dates = buildRepeatDates(data.date, repeat);
+    const seriesId = opts.seriesId || uid('s');
+    const now = new Date().toISOString();
+    const base = Object.assign({}, data);
+    delete base.id;
+    delete base.repeat;
+    delete base.seriesId;
+
+    return dates.map((date, index) => {
+      const task = normalizeTask(Object.assign(
+        { id: index === 0 && opts.firstId ? opts.firstId : uid('t') },
+        base,
+        { date: date, seriesId: seriesId, repeat: repeat }
+      ));
+      task.createdAt = (index === 0 && opts.createdAt) || now;
+      task.updatedAt = now;
+      return task;
+    });
+  }
+
+  /** Создаёт серию задач по правилу повтора. */
+  function addTaskSeries(data) {
+    const repeat = normalizeRepeat(data.repeat);
+    if (!repeat) return [addTask(data)];
+    const tasks = buildSeriesTasks(data, repeat);
+    Array.prototype.push.apply(state.tasks, tasks);
+    emit();
+    return tasks;
+  }
+
+  /** Превращает обычную задачу в серию, сохраняя её id. */
+  function startSeries(id, data) {
+    const index = state.tasks.findIndex((t) => t.id === id);
+    if (index === -1) return [];
+    const existing = state.tasks[index];
+    const repeat = normalizeRepeat(data.repeat);
+    if (!repeat) {
+      updateTask(id, data);
+      return [existing];
+    }
+    const tasks = buildSeriesTasks(data, repeat, {
+      seriesId: id,
+      firstId: id,
+      createdAt: existing.createdAt
+    });
+    state.tasks.splice(index, 1, tasks[0]);
+    Array.prototype.push.apply(state.tasks, tasks.slice(1));
+    emit();
+    return tasks;
+  }
+
+  /**
+   * Обновляет серию от указанной задачи.
+   * - правило не изменилось: поля применяются ко всем, дата — только к текущей;
+   * - правило изменилось: будущие повторения пересоздаются с текущей даты;
+   * - повтор выключен: серия останавливается, прошедшие задачи остаются обычными.
+   */
+  function updateSeries(seriesId, anchorId, data) {
+    const anchor = state.tasks.find((t) => t.id === anchorId && t.seriesId === seriesId);
+    if (!anchor) return null;
+
+    const repeat = normalizeRepeat(data.repeat);
+    const now = new Date().toISOString();
+    const fields = {
+      title: data.title,
+      notes: data.notes,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      assigneeId: data.assigneeId,
+      priority: data.priority,
+      status: data.status
+    };
+    const anchorDate = data.date || anchor.date;
+
+    if (!repeat) {
+      state.tasks = state.tasks.filter((t) => t.seriesId !== seriesId || t.date <= anchorDate);
+      state.tasks.forEach((t) => {
+        if (t.seriesId !== seriesId) return;
+        Object.assign(t, fields, { updatedAt: now, seriesId: '', repeat: null });
+        if (t.id === anchorId) t.date = anchorDate;
+      });
+      emit();
+      return { stopped: true };
+    }
+
+    const changed = JSON.stringify(anchor.repeat || null) !== JSON.stringify(repeat);
+    if (changed) {
+      state.tasks.forEach((t) => {
+        if (t.seriesId === seriesId && t.date < anchorDate) {
+          Object.assign(t, fields, { updatedAt: now, repeat: cloneRepeat(repeat) });
+        }
+      });
+      state.tasks = state.tasks.filter((t) => !(t.seriesId === seriesId && t.date >= anchorDate));
+      const fresh = buildSeriesTasks(data, repeat, { seriesId: seriesId, firstId: anchorId });
+      Array.prototype.push.apply(state.tasks, fresh);
+      emit();
+      return { regenerated: true, tasks: fresh };
+    }
+
+    const members = seriesMembers(seriesId);
+    members.forEach((t) => {
+      Object.assign(t, fields, { updatedAt: now, repeat: cloneRepeat(repeat) });
+    });
+    anchor.date = anchorDate;
+    emit();
+    return { tasks: members };
+  }
+
+  /** Удаляет все задачи серии; возвращает их для отмены. */
+  function removeSeries(seriesId) {
+    const members = seriesMembers(seriesId);
+    if (!members.length) return [];
+    state.tasks = state.tasks.filter((t) => t.seriesId !== seriesId);
+    emit();
+    return members;
+  }
+
+  function restoreTasks(list) {
+    if (!Array.isArray(list) || !list.length) return;
+    const existing = new Set(state.tasks.map((t) => t.id));
+    list.forEach((task) => {
+      if (!task || !task.id || existing.has(task.id)) return;
+      state.tasks.push(task);
+      existing.add(task.id);
+    });
     emit();
   }
 
@@ -1111,6 +1363,7 @@ window.CAL = window.CAL || {};
     load, save, subscribe, emit, refresh, isShared, snapshot,
     getPerson, personName, personColor, taskCountForPerson,
     addTask, updateTask, removeTask, restoreTask,
+    addTaskSeries, startSeries, updateSeries, removeSeries, restoreTasks, repeatLabel, seriesMembers,
     addPerson, updatePerson, removePerson, nextPersonColor,
     dictList, dictEntry, dictLabel, dictColor, dictUsage, nextDictColor,
     dictAdd, dictUpdate, dictRemove,
