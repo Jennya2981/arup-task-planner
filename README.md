@@ -8,7 +8,7 @@
 открывают ту же ссылку и только смотрят.
 
 **Онлайн-версия:** https://jennya2981.github.io/arup-task-planner/
-(общее хранилище — https://github.com/Jennya2981/arup-calendar-data, файл `calendar.json`)
+
 
 ## Запуск
 
