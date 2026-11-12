@@ -28,6 +28,10 @@
     dom.repeatIntervalLabel = document.getElementById('repeatIntervalLabel');
     dom.repeatUntilWrap = document.getElementById('repeatUntilWrap');
     dom.repeatHint = document.getElementById('repeatHint');
+    dom.rescheduleWrap = document.getElementById('rescheduleWrap');
+    dom.rescheduleHint = document.getElementById('rescheduleHint');
+    dom.taskHistoryWrap = document.getElementById('taskHistoryWrap');
+    dom.taskHistoryList = document.getElementById('taskHistoryList');
     dom.peopleModal = document.getElementById('peopleModal');
     dom.peopleForm = document.getElementById('personForm');
     dom.peopleList = document.getElementById('peopleList');
@@ -104,6 +108,61 @@
       escapeHtml(item.label) + '</option>').join('');
   }
 
+  function isRescheduleStatus(key) {
+    if (key === 'rescheduled') return true;
+    const entry = store.dictEntry('status', key);
+    return !!(entry && entry.label === 'Перенос');
+  }
+
+  function fmtHistoryDate(dateKey, time) {
+    if (!dateKey) return '—';
+    const text = utils.fmtDayLong(utils.fromKey(dateKey));
+    return time ? text + ', ' + utils.fmtTime(time) : text;
+  }
+
+  function renderTaskHistory(task) {
+    if (!dom.taskHistoryWrap || !dom.taskHistoryList) return;
+    const history = task && Array.isArray(task.history) ? task.history.slice().reverse() : [];
+    if (!history.length) {
+      dom.taskHistoryWrap.hidden = true;
+      dom.taskHistoryList.innerHTML = '';
+      return;
+    }
+    dom.taskHistoryWrap.hidden = false;
+    dom.taskHistoryList.innerHTML = history.map((item) => {
+      const when = item.at ? new Date(item.at).toLocaleString('ru-RU') : '';
+      let text = '';
+      if (item.type === 'rescheduled') {
+        text = 'Перенос: ' + fmtHistoryDate(item.from && item.from.date, item.from && item.from.startTime) +
+          ' → ' + fmtHistoryDate(item.to && item.to.date, item.to && item.to.startTime);
+      } else if (item.type === 'status') {
+        text = 'Статус: ' + escapeHtml(store.dictLabel('status', item.from && item.from.status) || '—') +
+          ' → ' + escapeHtml(store.dictLabel('status', item.to && item.to.status) || '—');
+      } else {
+        text = escapeHtml(item.note || item.type || 'Изменение');
+      }
+      if (item.note && item.type !== 'status') text += ' (' + escapeHtml(item.note) + ')';
+      return '<li class="history-item"><span class="history-item__text">' + text +
+        '</span><span class="history-item__at">' + escapeHtml(when) + '</span></li>';
+    }).join('');
+  }
+
+  function refreshRescheduleFields() {
+    if (!dom.taskForm || !dom.taskForm.elements.status) return;
+    const form = dom.taskForm;
+    const admin = store.isAdmin();
+    const isRescheduled = isRescheduleStatus(form.elements.status.value);
+    dom.rescheduleWrap.hidden = !isRescheduled;
+    dom.rescheduleHint.hidden = !isRescheduled;
+    [form.elements.rescheduleDate, form.elements.rescheduleTime].forEach((control) => {
+      if (!control) return;
+      control.disabled = !admin || !isRescheduled;
+      if (!isRescheduled) {
+        // не очищаем сразу, чтобы можно было переключиться обратно без потери ввода
+      }
+    });
+  }
+
   /** Включает/выключает режим просмотра формы задачи. */
   function applyTaskFormMode(admin) {
     dom.taskForm.querySelectorAll('input, select, textarea').forEach((control) => {
@@ -117,6 +176,7 @@
     const task = editingTask();
     dom.deleteSeriesBtn.hidden = !(admin && task && task.seriesId);
     refreshRepeatFields();
+    refreshRescheduleFields();
   }
 
   function editingTask() {
@@ -190,6 +250,8 @@
     form.elements.repeatInterval.value = '1';
     form.elements.repeatUntil.value = '';
     form.elements.repeatScope.value = 'one';
+    form.elements.rescheduleDate.value = '';
+    form.elements.rescheduleTime.value = '';
     dom.repeatScopeWrap.hidden = true;
     dom.repeatSummary.textContent = '';
 
@@ -214,12 +276,14 @@
       if (task.seriesId) {
         dom.repeatScopeWrap.hidden = false;
       }
+      renderTaskHistory(task);
     } else {
       dom.taskModalTitle.textContent = 'Новая задача';
       form.elements.date.value = dateKey || state.selectedDate || toKey(new Date());
       if (prefillStartTime) form.elements.startTime.value = prefillStartTime;
       form.elements.priority.value = store.dictEntry('priority', 'normal') ? 'normal' : store.dictList('priority')[0].key;
       form.elements.status.value = store.dictEntry('status', 'todo') ? 'todo' : store.dictList('status')[0].key;
+      renderTaskHistory(null);
     }
 
     applyTaskFormMode(admin);
@@ -263,12 +327,43 @@
     const repeat = readRepeat();
     const scope = form.elements.repeatScope.value;
 
+    // История и перенос: при выборе статуса "Перенос" фиксируем изменение и переносим задачу.
     if (editingTaskId) {
       const task = editingTask();
       if (!task) return;
+      const history = Array.isArray(task.history) ? task.history.slice() : [];
+      const now = new Date().toISOString();
+
+      if (isRescheduleStatus(payload.status)) {
+        const toDate = form.elements.rescheduleDate.value || payload.date || task.date;
+        const toStart = form.elements.rescheduleTime.value || payload.startTime || task.startTime || '';
+        history.push({
+          type: 'rescheduled',
+          at: now,
+          from: { date: task.date, startTime: task.startTime || '', endTime: task.endTime || '', status: task.status },
+          to: { date: toDate, startTime: toStart, endTime: payload.endTime || '', status: payload.status },
+          note: ''
+        });
+        payload.date = toDate;
+        payload.startTime = toStart;
+      } else if (task.status !== payload.status && (payload.status === 'cancelled' || task.status === 'rescheduled' || task.status === 'cancelled')) {
+        history.push({
+          type: 'status',
+          at: now,
+          from: { status: task.status },
+          to: { status: payload.status },
+          note: ''
+        });
+      }
+      payload.history = history;
 
       if (task.seriesId && scope === 'series') {
+        // Для серии: перенос/история применяются к выбранной задаче как правка; серия обновляется полями без перезаписи истории других.
         const result = store.updateSeries(task.seriesId, task.id, Object.assign({}, payload, { repeat: repeat }));
+        // если статус перенос - updateSeries не трогает history у anchor специально? мы передали history в payload но updateSeries берёт fields subset
+        if (isRescheduleStatus(payload.status) || history.length !== (task.history || []).length) {
+          store.updateTask(task.id, { history: history, date: payload.date, startTime: payload.startTime, status: payload.status });
+        }
         if (result && result.stopped) showToast('Повторение остановлено');
         else showToast('Серия обновлена');
       } else if (!task.seriesId && repeat) {
@@ -278,16 +373,16 @@
           : 'Задача обновлена');
       } else {
         store.updateTask(editingTaskId, payload);
-        showToast('Задача обновлена');
+        showToast(isRescheduleStatus(payload.status) ? 'Задача перенесена' : 'Задача обновлена');
       }
     } else if (repeat) {
-      const created = store.addTaskSeries(Object.assign({}, payload, { repeat: repeat }));
+      const created = store.addTaskSeries(Object.assign({}, payload, { repeat: repeat, history: [] }));
       showToast(created.length > 1
         ? 'Создано ' + created.length + ' повторений'
         : 'Задача создана');
     } else {
-      state.selectedDate = date;
-      store.addTask(payload);
+      state.selectedDate = payload.date || date;
+      store.addTask(Object.assign({}, payload, { history: [] }));
       showToast('Задача создана');
     }
 
@@ -499,7 +594,7 @@
     dictPendingColor[kind] = store.nextDictColor(kind);
     input.value = '';
     renderDictSection(kind);
-    showToast('Добавлен ' + (kind === 'priority' ? 'приоритет' : 'статус') + ': ' + label);
+    showToast('Добавлено: ' + label);
     return key;
   }
 
@@ -533,7 +628,7 @@
     const [kind, key] = splitRef(ref);
     const current = store.dictEntry(kind, key);
     if (!current) return;
-    const kindLabel = kind === 'priority' ? 'приоритет' : 'статус';
+    const kindLabel = kind === 'priority' ? 'событие' : 'статус';
     const usage = store.dictUsage(kind, key);
     const remaining = store.dictList(kind).filter((item) => item.key !== key);
     const note = (usage && remaining.length)
@@ -925,6 +1020,7 @@
     deleteCurrentTask,
     deleteCurrentSeries,
     refreshRepeatFields,
+    refreshRescheduleFields,
     openPeopleModal,
     setPendingColor,
     addPerson,

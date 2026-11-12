@@ -17,16 +17,19 @@ window.CAL = window.CAL || {};
   const ADMIN_PWD_HASH = '4e1d0a7f06351f71e874ac97d7a645b4f92a0dbdd29cc169403f2f86057ac01a';
 
   const DEFAULT_PRIORITIES = {
-    low:    { label: 'Низкий',   color: '#94a3b8' },
-    normal: { label: 'Обычный',  color: '#3b82f6' },
-    high:   { label: 'Высокий', color: '#f59e0b' },
-    urgent: { label: 'Срочный',  color: '#ef4444' }
+    low:    { label: 'Низкий',        color: '#94a3b8' },
+    normal: { label: 'Обычный',       color: '#3b82f6' },
+    high:   { label: 'Высокий',       color: '#f59e0b' },
+    urgent: { label: 'Срочный',       color: '#ef4444' },
+    info:   { label: 'Для информации', color: '#8b5cf6' }
   };
 
   const DEFAULT_STATUSES = {
-    todo:  { label: 'К выполнению', color: '#64748b' },
-    doing: { label: 'В работе',     color: '#0ea5e9' },
-    done:  { label: 'Выполнено',    color: '#22c55e' }
+    todo:        { label: 'К выполнению', color: '#64748b' },
+    doing:       { label: 'В работе',     color: '#0ea5e9' },
+    done:        { label: 'Выполнено',    color: '#22c55e' },
+    cancelled:   { label: 'Отмена',       color: '#94a3b8' },
+    rescheduled: { label: 'Перенос',      color: '#f59e0b' }
   };
 
   const ROLES = {
@@ -592,6 +595,17 @@ window.CAL = window.CAL || {};
       };
     });
     if (!Object.keys(out).length) return cloneDict(fallback);
+    // Добавляем отсутствующие элементы из стандартного набора, не трогая существующие.
+    if (fallback && typeof fallback === 'object') {
+      Object.keys(fallback).forEach((key) => {
+        if (out[key]) return;
+        out[key] = {
+          label: fallback[key].label,
+          color: fallback[key].color || PALETTE[Object.keys(out).length % PALETTE.length],
+          order: Object.keys(out).length
+        };
+      });
+    }
     return reindex(out);
   }
 
@@ -923,6 +937,24 @@ window.CAL = window.CAL || {};
   }
 
   function normalizeTask(raw) {
+    const history = Array.isArray(raw.history) ? raw.history.map((item) => ({
+      type: String(item && item.type || ''),
+      at: item && item.at || '',
+      from: item && item.from ? {
+        date: item.from.date || '',
+        startTime: item.from.startTime || '',
+        endTime: item.from.endTime || '',
+        status: item.from.status || ''
+      } : null,
+      to: item && item.to ? {
+        date: item.to.date || '',
+        startTime: item.to.startTime || '',
+        endTime: item.to.endTime || '',
+        status: item.to.status || ''
+      } : null,
+      note: item && item.note ? String(item.note) : ''
+    })) : [];
+
     return {
       id: raw.id || uid('t'),
       title: String(raw.title || 'Без названия'),
@@ -939,6 +971,7 @@ window.CAL = window.CAL || {};
         interval: raw.repeat.interval || 1,
         until: raw.repeat.until || ''
       } : null,
+      history: history,
       createdAt: raw.createdAt || new Date().toISOString(),
       updatedAt: raw.updatedAt || new Date().toISOString()
     };
@@ -1257,7 +1290,7 @@ window.CAL = window.CAL || {};
   }
 
   function isOverdue(task) {
-    if (task.status === 'done') return false;
+    if (task.status === 'done' || task.status === 'cancelled' || task.status === 'rescheduled') return false;
     return task.date < todayKey();
   }
 

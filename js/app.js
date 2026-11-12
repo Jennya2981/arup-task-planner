@@ -253,6 +253,9 @@
       if (event.target.name === 'repeatFreq' || event.target.name === 'repeatScope') {
         CAL.modal.refreshRepeatFields();
       }
+      if (event.target.name === 'status') {
+        CAL.modal.refreshRescheduleFields();
+      }
     });
     document.getElementById('deleteTaskBtn').addEventListener('click', CAL.modal.deleteCurrentTask);
     document.getElementById('deleteSeriesBtn').addEventListener('click', CAL.modal.deleteCurrentSeries);

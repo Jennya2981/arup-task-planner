@@ -49,8 +49,8 @@
 
       <section class="sidebar__section">
         <div class="section__head">
-          <span>Приоритет</span>
-          <button class="link-btn admin-only" id="managePriorityBtn" title="Редактировать приоритеты">Управлять</button>
+          <span>Событие</span>
+          <button class="link-btn admin-only" id="managePriorityBtn" title="Редактировать события">Управлять</button>
         </div>
         <div class="filter-list" id="priorityFilters"></div>
       </section>
@@ -189,7 +189,7 @@
           <select name="assigneeId"></select>
         </label>
         <label class="field">
-          <span class="field__label">Приоритет</span>
+          <span class="field__label">Событие</span>
           <select name="priority"></select>
         </label>
         <label class="field">
@@ -198,10 +198,27 @@
         </label>
       </div>
 
+      <div class="field-row" id="rescheduleWrap" hidden>
+        <label class="field">
+          <span class="field__label">Новая дата переноса</span>
+          <input type="date" name="rescheduleDate">
+        </label>
+        <label class="field">
+          <span class="field__label">Новое время переноса</span>
+          <input type="time" name="rescheduleTime">
+        </label>
+      </div>
+      <p class="field__hint" id="rescheduleHint" hidden>При сохранении с статусом «Перенос» задача будет перенесена на выбранные дату/время, а изменение добавится в историю.</p>
+
       <label class="field">
         <span class="field__label">Описание</span>
         <textarea name="notes" rows="4" maxlength="2000" placeholder="Детали, ссылки, критерии готовности…"></textarea>
       </label>
+
+      <div class="field" id="taskHistoryWrap" hidden>
+        <span class="field__label">История</span>
+        <ul class="history-list" id="taskHistoryList"></ul>
+      </div>
     </div>
 
     <footer class="modal__foot">
@@ -244,15 +261,15 @@
   <div class="modal__backdrop" data-close></div>
   <div class="modal__card modal__card--narrow">
     <header class="modal__head">
-      <h2>Приоритеты и статусы</h2>
+      <h2>События и статусы</h2>
       <button type="button" class="icon-btn" data-close title="Закрыть (Esc)">✕</button>
     </header>
 
     <div class="modal__body">
       <section class="dict-section">
-        <h3 class="dict__title">Приоритеты</h3>
+        <h3 class="dict__title">События</h3>
         <form class="person-form" id="dictFormPriority" data-dict-form="priority" autocomplete="off">
-          <input type="text" name="label" required maxlength="40" placeholder="Новый приоритет">
+          <input type="text" name="label" required maxlength="40" placeholder="Новое событие">
           <div class="swatches" id="dictSwatchesPriority"></div>
           <button type="submit" class="btn btn--primary">Добавить</button>
         </form>
