@@ -862,6 +862,51 @@ body.is-dragging .task:active { transform: none; }
   .sidebar, .topbar { display: none; }
 }
 
+/* ---------------- Экран доступа (регистрация) ---------------- */
+
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: color-mix(in srgb, var(--bg) 92%, #000);
+  backdrop-filter: blur(2px);
+}
+.auth-gate[hidden] { display: none; }
+body.is-gated { overflow: hidden; }
+
+.auth-gate__card {
+  width: min(460px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 28px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-gate__logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.auth-gate__title { margin: 0; font-size: 22px; }
+.auth-gate__text { margin: 0; color: var(--muted); line-height: 1.55; font-size: 14px; }
+.auth-gate__actions { display: flex; gap: 10px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+
 /* ---------------- История задачи ---------------- */
 
 .history-list {

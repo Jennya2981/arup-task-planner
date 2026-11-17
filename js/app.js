@@ -19,7 +19,8 @@
       'importFile', 'resetBtn', 'app', 'roleSelect', 'managePriorityBtn',
       'manageStatusBtn', 'dictFormPriority', 'dictFormStatus', 'adminLoginBtn',
       'syncStatus', 'userRegBtn', 'userLoginBtn', 'userProfileBtn', 'userLogoutBtn',
-      'notifUsersBtn', 'userSessionHint', 'bellBtn', 'bellBadge'
+      'notifUsersBtn', 'userSessionHint', 'bellBtn', 'bellBadge',
+      'authGate', 'gateLoginBtn', 'gateRegisterBtn'
     ].forEach((id) => { dom[id] = document.getElementById(id); });
   }
 
@@ -34,7 +35,7 @@
     bindDelegatedEvents();
     bindKeyboard();
 
-    store.subscribe(() => { CAL.ui.render(); updateBellUI(); });
+    store.subscribe(() => { CAL.ui.render(); updateBellUI(); updateAuthGate(); });
 
     await store.load();
     CAL.ui.render();
@@ -60,7 +61,18 @@
     }
   }
 
+  /** Экран доступа: календарь виден администратору или вошедшему пользователю. */
+  function updateAuthGate() {
+    if (!dom.authGate) return;
+    const isAdmin = store.isAdmin ? store.isAdmin() : false;
+    const session = store.getUserSession ? store.getUserSession() : null;
+    const allowed = isAdmin || !!(session && session.id && session.login);
+    dom.authGate.hidden = allowed;
+    document.body.classList.toggle('is-gated', !allowed);
+  }
+
   function updateUserSessionUI() {
+    updateAuthGate();
     const s = store.getUserSession ? store.getUserSession() : null;
     if (dom.userRegBtn) dom.userRegBtn.hidden = !!s;
     if (dom.userLoginBtn) dom.userLoginBtn.hidden = !!s;
@@ -200,6 +212,9 @@
       CAL.ui.render();
       dom.searchInput.focus();
     });
+
+    if (dom.gateLoginBtn) dom.gateLoginBtn.addEventListener('click', () => CAL.modal.openUserLogin());
+    if (dom.gateRegisterBtn) dom.gateRegisterBtn.addEventListener('click', () => CAL.modal.openUserReg());
 
     dom.managePeopleBtn.addEventListener('click', () => CAL.modal.openPeopleModal());
 

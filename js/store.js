@@ -304,7 +304,25 @@ window.CAL = window.CAL || {};
   /* --------------------------- Пользователи/сессия ----------------------- */
 
   const USER_SESSION_KEY = 'task-calendar.userSession';
-  let userSession = null;  // { id, login, assigneeId, email, role: 'user'|'admin' }
+  // Регистрации, созданные в этом браузере: без ключа доступа коллега не может
+  // записать нового пользователя в общий файл, поэтому копия хранится локально
+  // и подмешивается к общему списку пользователей.
+  const LOCAL_USERS_KEY = 'task-calendar.localUsers';
+  let userSession;  // { id, login, assigneeId, email, role: 'user'|'admin' }; undefined = ещё не загружена из localStorage
+
+  function loadLocalUsers() {
+    try {
+      const raw = localStorage.getItem(LOCAL_USERS_KEY);
+      const list = raw ? JSON.parse(raw) : [];
+      return Array.isArray(list) ? list : [];
+    } catch (err) {
+      return [];
+    }
+  }
+
+  function saveLocalUsers(list) {
+    try { localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(list || [])); } catch (err) { /* приватный режим */ }
+  }
 
   function loadUserSession() {
     try {
@@ -354,27 +372,37 @@ window.CAL = window.CAL || {};
     }
   }
 
+  function normalizeUserRecord(u) {
+    if (!u || !u.id || !u.login || !u.passHash) return null;
+    return {
+      id: String(u.id),
+      login: String(u.login).trim(),
+      passHash: String(u.passHash),
+      email: u.email ? String(u.email).trim() : '',
+      assigneeId: u.assigneeId ? String(u.assigneeId) : '',
+      notify: {
+        onAssign: u.notify && u.notify.onAssign !== false,
+        onMove: u.notify && u.notify.onMove !== false,
+        remind: u.notify && u.notify.remind !== false,
+        beforeMinutes: Array.isArray(u.notify && u.notify.beforeMinutes) ? u.notify.beforeMinutes.filter((n) => typeof n === 'number') : [15, 30, 60]
+      },
+      channels: Array.isArray(u.channels) && u.channels.length ? u.channels.filter((c) => c === 'email') : ['email'],
+      createdAt: u.createdAt || new Date().toISOString(),
+      updatedAt: u.updatedAt || new Date().toISOString()
+    };
+  }
+
   function ensureUsers(data) {
-    if (!data || typeof data !== 'object') return [];
-    if (!Array.isArray(data.users)) return [];
-    return data.users
-      .filter((u) => u && u.id && u.login && u.passHash)
-      .map((u) => ({
-        id: String(u.id),
-        login: String(u.login).trim(),
-        passHash: String(u.passHash),
-        email: u.email ? String(u.email).trim() : '',
-        assigneeId: u.assigneeId ? String(u.assigneeId) : '',
-        notify: {
-          onAssign: u.notify && u.notify.onAssign !== false,
-          onMove: u.notify && u.notify.onMove !== false,
-          remind: u.notify && u.notify.remind !== false,
-          beforeMinutes: Array.isArray(u.notify && u.notify.beforeMinutes) ? u.notify.beforeMinutes.filter((n) => typeof n === 'number') : [15, 30, 60]
-        },
-        channels: Array.isArray(u.channels) && u.channels.length ? u.channels.filter((c) => c === 'email') : ['email'],
-        createdAt: u.createdAt || new Date().toISOString(),
-        updatedAt: u.updatedAt || new Date().toISOString()
-      }));
+    const source = data && Array.isArray(data.users) ? data.users : [];
+    const out = [];
+    const seen = new Set();
+    source.concat(loadLocalUsers()).forEach((raw) => {
+      const user = normalizeUserRecord(raw);
+      if (!user || seen.has(user.id)) return;
+      seen.add(user.id);
+      out.push(user);
+    });
+    return out;
   }
 
   function getUsers() {
@@ -410,6 +438,12 @@ window.CAL = window.CAL || {};
     };
     if (idx >= 0) list[idx] = normalized; else list.push(normalized);
     state.users = list;
+
+    // Локальная копия нужна, чтобы регистрация выжила после опроса общего
+    // хранилища (у пользователя без ключа нет права записать её в GitHub).
+    const local = loadLocalUsers().filter((u) => !u || String(u.id) !== normalized.id);
+    local.push(normalized);
+    saveLocalUsers(local);
     emit(true);
   }
 
@@ -418,6 +452,7 @@ window.CAL = window.CAL || {};
     const next = list.filter((u) => u.id !== String(userId));
     if (next.length === list.length) return;
     state.users = next;
+    saveLocalUsers(loadLocalUsers().filter((u) => u && String(u.id) !== String(userId)));
     emit(true);
   }
 
@@ -796,6 +831,9 @@ window.CAL = window.CAL || {};
 
   function save() {
     if (shared) {
+      // Зритель без ключа не может писать в общее хранилище: не пытаемся,
+      // иначе индикатор связи показывал бы ошибку при каждой регистрации.
+      if (!CAL.db || !CAL.db.hasToken()) return;
       schedulePush();
       return;
     }
@@ -1371,6 +1409,8 @@ window.CAL = window.CAL || {};
     state.priorities = cloneDict(DEFAULT_PRIORITIES);
     state.statuses = cloneDict(DEFAULT_STATUSES);
     state.users = [];
+    saveLocalUsers([]);
+    saveUserSession(null);
     state.filters.assignees.clear();
     state.filters.priorities.clear();
     state.filters.statuses.clear();
@@ -1404,6 +1444,7 @@ window.CAL = window.CAL || {};
     matchesFilters, visibleTasks, tasksByDate, tasksInRange, isOverdue,
     stats, exportData, importData, resetAll,
     sha256Hex, getUserSession, saveUserSession, getUsers, findUserByLogin, upsertUser, deleteUser, ensureUsers,
+    loadLocalUsers, saveLocalUsers,
     loadNotifications, saveNotifications, loadSeen, saveSeen, addNotification, clearNotifications, markAllRead, unreadCount, scanForNotifications
   };
 })(window.CAL);
