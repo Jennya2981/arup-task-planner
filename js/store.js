@@ -8,12 +8,16 @@ window.CAL = window.CAL || {};
 
   /* ----------------------------- Константы ----------------------------- */
 
-  const STORAGE_KEY = 'task-calendar.v1';
+  const CFG = window.CAL_CONFIG || {};
+  // Пространство имён по репозиторию: страницы на jennya2981.github.io
+  // используют один домен, поэтому ключи разных календарей не должны пересекаться.
+  const NS = (CFG.repo || 'local').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const STORAGE_KEY = 'task-calendar.' + NS + '.v1';
 
   /* Права администратора: выдаются только этому браузеру после ввода пароля владельца.
      Пароль хранится не текстом, а SHA-256 хэшем — чтобы его нельзя было прочитать в коде.
      Чтобы сменить пароль: node -e "console.log(require('crypto').createHash('sha256').update('НОВЫЙ_ПАРОЛЬ').digest('hex'))" */
-  const ADMIN_KEY = 'task-calendar.admin';
+  const ADMIN_KEY = 'task-calendar.' + NS + '.admin';
   const ADMIN_PWD_HASH = '4e1d0a7f06351f71e874ac97d7a645b4f92a0dbdd29cc169403f2f86057ac01a';
 
   const DEFAULT_PRIORITIES = {
@@ -303,11 +307,11 @@ window.CAL = window.CAL || {};
 
   /* --------------------------- Пользователи/сессия ----------------------- */
 
-  const USER_SESSION_KEY = 'task-calendar.userSession';
+  const USER_SESSION_KEY = 'task-calendar.' + NS + '.userSession';
   // Регистрации, созданные в этом браузере: без ключа доступа коллега не может
   // записать нового пользователя в общий файл, поэтому копия хранится локально
   // и подмешивается к общему списку пользователей.
-  const LOCAL_USERS_KEY = 'task-calendar.localUsers';
+  const LOCAL_USERS_KEY = 'task-calendar.' + NS + '.localUsers';
   let userSession;  // { id, login, assigneeId, email, role: 'user'|'admin' }; undefined = ещё не загружена из localStorage
 
   function loadLocalUsers() {
@@ -460,8 +464,8 @@ window.CAL = window.CAL || {};
   /* Хранятся локально в браузере получателя. Общий файл задаёт лишь события:
      кому назначили/перенесли задачу — по привязке user.assigneeId. */
 
-  const NOTIF_KEY = 'task-calendar.notifications';
-  const NOTIF_SEEN_KEY = 'task-calendar.notifSeen';
+  const NOTIF_KEY = 'task-calendar.' + NS + '.notifications';
+  const NOTIF_SEEN_KEY = 'task-calendar.' + NS + '.notifSeen';
   const NOTIF_LIMIT = 100;
 
   function loadNotifications() {

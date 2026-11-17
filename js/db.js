@@ -10,8 +10,11 @@ window.CAL = window.CAL || {};
   'use strict';
 
   const CFG = window.CAL_CONFIG || {};
-  const TOKEN_KEY = 'task-calendar.token';
-  const CACHE_KEY = 'task-calendar.shared-cache';
+  // Ключи localStorage должны отличаться для разных репозиториев: все страницы
+  // github.io живут на одном домене и иначе делят кэш и токены друг с другом.
+  const NS = (CFG.repo || 'local').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const TOKEN_KEY = 'task-calendar.' + NS + '.token';
+  const CACHE_KEY = 'task-calendar.' + NS + '.shared-cache';
   const API = 'https://api.github.com';
 
   let status = { state: 'idle', message: '', at: Date.now() };
